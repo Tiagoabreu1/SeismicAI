@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SeismicAI Pulse — probabilidade semanal de terremotos no Círculo de Fogo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">🌋</span>
+      <div>
+        <h1>SeismicAI Pulse</h1>
+        <p class="tagline">Probabilidade de terremoto na semana seguinte, por área do Círculo de Fogo</p>
+      </div>
+    </div>
+    <div class="controls">
+      <label for="week-select">Semana</label>
+      <select id="week-select"><option>carregando…</option></select>
+      <label class="toggle"><input type="checkbox" id="show-events" checked> eventos</label>
+      <span id="source-badge" class="badge">—</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="kpis" class="kpis">
+      <div class="kpi"><span class="kpi-label">Semana prevista</span><span class="kpi-value" id="kpi-week">—</span></div>
+      <div class="kpi"><span class="kpi-label">Células</span><span class="kpi-value" id="kpi-cells">—</span></div>
+      <div class="kpi alarme"><span class="kpi-label">ALARME</span><span class="kpi-value" id="kpi-alarme">—</span></div>
+      <div class="kpi atencao"><span class="kpi-label">ATENÇÃO</span><span class="kpi-value" id="kpi-atencao">—</span></div>
+      <div class="kpi"><span class="kpi-label" id="kpi-extra-label">p máxima</span><span class="kpi-value" id="kpi-extra">—</span></div>
+    </section>
+
+    <div class="layout">
+      <div id="map" role="application" aria-label="mapa de probabilidades"></div>
+      <aside class="panel">
+        <div id="detail" class="detail">
+          <h2>Célula</h2>
+          <p class="muted">Clique em uma célula do mapa para ver os detalhes.</p>
+        </div>
+        <h2>Maiores probabilidades</h2>
+        <ol id="ranking" class="ranking"></ol>
+        <div class="legend">
+          <h2>Legenda</h2>
+          <div class="scale"><span>0 %</span><div class="gradient"></div><span>≥ 70 %</span></div>
+          <p><span class="swatch alarme"></span> contorno vermelho: <b>ALARME</b> (rede de Hopfield; terremoto M ≥ <span class="alarm-mag">5</span> provável)</p>
+          <p><span class="swatch atencao"></span> contorno laranja: <b>ATENÇÃO</b></p>
+          <p><span class="swatch evento"></span> círculos: eventos M ≥ <span class="label-mag">4</span></p>
+        </div>
+      </aside>
+    </div>
+
+    <section class="about">
+      <h2>Como funciona</h2>
+      <p>O catálogo sísmico do USGS é agregado em células de <span class="cell-deg">2</span>° × <span class="cell-deg">2</span>° e semanas.
+        Uma rede neural recorrente (LSTM), treinada com as 52 semanas anteriores de cada célula e de suas vizinhas, estima a
+        probabilidade de ocorrer pelo menos um terremoto M ≥ <span class="label-mag">4</span> na semana seguinte. Uma rede de Hopfield
+        transforma esse resultado e a atividade recente em um estado de alerta; o <b>ALARME</b> só é emitido para padrões associados a
+        terremotos de magnitude mais alta (M ≥ <span class="alarm-mag">5</span>).</p>
+      <p id="metrics-line" class="muted"></p>
+      <h2>Uso responsável</h2>
+      <p>O SeismicAI Pulse tem finalidade acadêmica e experimental. Os resultados são estimativas estatísticas produzidas a partir dos
+        dados e das hipóteses do projeto. Ele <b>não</b> é um sistema oficial de alerta, <b>não</b> faz previsão determinística de
+        terremotos e <b>não</b> substitui as instituições responsáveis pelo monitoramento sísmico.</p>
+      <p class="muted">Dados: USGS ComCat (earthquake.usgs.gov). Projeto da disciplina de Redes Neurais e Deep Learning, 2026 —
+        Alice De Muylder, Valmir Cerutti e Tiago Abreu.</p>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

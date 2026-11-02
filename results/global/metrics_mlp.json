@@ -1,0 +1,116 @@
+{
+  "model": "mlp",
+  "threshold_from_val": 0.13128477334976196,
+  "val": {
+    "n": 160930,
+    "positives": 4702,
+    "positive_rate": 0.029217672279873236,
+    "roc_auc": 0.806335821832757,
+    "pr_auc": 0.17848169086040808,
+    "brier": 0.026088291846071924,
+    "log_loss": 0.11069274434603683,
+    "threshold": 0.13128477334976196,
+    "precision": 0.21859006108634638,
+    "recall": 0.2815823054019566,
+    "f1": 0.2461195278371596,
+    "accuracy": 0.9495992046231281,
+    "precision_top5": 0.19152373850360427,
+    "recall_top5": 0.3277328796256912,
+    "mean_pred": 0.02747930114843041
+  },
+  "test": {
+    "n": 193270,
+    "positives": 5736,
+    "positive_rate": 0.029678687846018525,
+    "roc_auc": 0.8182443572407937,
+    "pr_auc": 0.18695514737572438,
+    "brier": 0.026301898890943327,
+    "log_loss": 0.11020871358592767,
+    "threshold": 0.13128477334976196,
+    "precision": 0.222294910375507,
+    "recall": 0.2961994421199442,
+    "f1": 0.25398011809552284,
+    "accuracy": 0.9483572204687742,
+    "precision_top5": 0.20188327814569537,
+    "recall_top5": 0.34013249651324967,
+    "mean_pred": 0.027626418299135654
+  },
+  "test_by_year": {
+    "2022": {
+      "n": 40040,
+      "positives": 1242,
+      "roc_auc": 0.8254714289188836,
+      "pr_auc": 0.20188387268798097
+    },
+    "2023": {
+      "n": 40040,
+      "positives": 1156,
+      "roc_auc": 0.8143429739026806,
+      "pr_auc": 0.1632659287802725
+    },
+    "2024": {
+      "n": 40810,
+      "positives": 1130,
+      "roc_auc": 0.8173282498929489,
+      "pr_auc": 0.15310522114245997
+    },
+    "2025": {
+      "n": 40040,
+      "positives": 1184,
+      "roc_auc": 0.8182939154410742,
+      "pr_auc": 0.21100877950588762
+    },
+    "2026": {
+      "n": 32340,
+      "positives": 1024,
+      "roc_auc": 0.814648400079033,
+      "pr_auc": 0.20248072588159383
+    }
+  },
+  "device": "cpu",
+  "n_params": 16961,
+  "epochs_run": 9,
+  "best_epoch": 7,
+  "profile": "global",
+  "train_rows": 1084930,
+  "neg_keep_rate": 1.0,
+  "logit_shift": 0.0,
+  "total_seconds": 95.9,
+  "args": {
+    "model": "mlp",
+    "profile": "global",
+    "data": null,
+    "panel": null,
+    "outdir": null,
+    "models_dir": null,
+    "epochs": 30,
+    "patience": 4,
+    "batch_size": 2048,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "dropout": 0.2,
+    "hidden": 64,
+    "layers": 1,
+    "mlp_hidden": "128,64,32",
+    "pos_weight": null,
+    "max_train": null,
+    "max_val": null,
+    "seed": 42,
+    "cpu": false
+  },
+  "log": [
+    "perfil global | modelo mlp | device cpu",
+    "parâmetros treináveis: 16,961",
+    "treino 1,084,930 linhas (30,453 positivos; negativos mantidos 100%) | validação 160,930 | teste 193,270",
+    "época  1  perda 0.1630  val ROC-AUC 0.8014  PR-AUC 0.1713  lr 1e-03      9s",
+    "época  2  perda 0.1093  val ROC-AUC 0.8033  PR-AUC 0.1709  lr 1e-03      9s",
+    "época  3  perda 0.1084  val ROC-AUC 0.8047  PR-AUC 0.1772  lr 1e-03      9s",
+    "época  4  perda 0.1081  val ROC-AUC 0.8046  PR-AUC 0.1765  lr 1e-03      9s",
+    "época  5  perda 0.1077  val ROC-AUC 0.8063  PR-AUC 0.1785  lr 1e-03      9s",
+    "época  6  perda 0.1074  val ROC-AUC 0.8053  PR-AUC 0.1782  lr 1e-03      9s",
+    "época  7  perda 0.1073  val ROC-AUC 0.8065  PR-AUC 0.1786  lr 1e-03      9s",
+    "época  8  perda 0.1070  val ROC-AUC 0.8056  PR-AUC 0.1782  lr 1e-03      9s",
+    "época  9  perda 0.1068  val ROC-AUC 0.8052  PR-AUC 0.1778  lr 5e-04      9s",
+    "early stopping (sem melhora há 4 épocas)"
+  ]
+}

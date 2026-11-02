@@ -1,0 +1,114 @@
+{
+  "model": "mlp_seq",
+  "threshold_from_val": 0.25611358880996704,
+  "val": {
+    "n": 111313,
+    "positives": 17718,
+    "positive_rate": 0.15917278305319235,
+    "roc_auc": 0.8345691338324431,
+    "pr_auc": 0.5441190598982019,
+    "brier": 0.09987386126489732,
+    "log_loss": 0.3275531876929114,
+    "threshold": 0.25611358880996704,
+    "precision": 0.46011610406364223,
+    "recall": 0.6039056326899198,
+    "f1": 0.5222951699899934,
+    "accuracy": 0.8241624967434172,
+    "precision_top5": 0.7310456342076895,
+    "recall_top5": 0.22965345975843773,
+    "mean_pred": 0.15701852227164903
+  },
+  "test": {
+    "n": 184340,
+    "positives": 30684,
+    "positive_rate": 0.16645329282846913,
+    "roc_auc": 0.8386440402509969,
+    "pr_auc": 0.5656382026445305,
+    "brier": 0.10175036360634636,
+    "log_loss": 0.3321472017857443,
+    "threshold": 0.25611358880996704,
+    "precision": 0.47118066697933897,
+    "recall": 0.622083170381958,
+    "f1": 0.5362174309993679,
+    "accuracy": 0.8208798958446349,
+    "precision_top5": 0.7606596506455463,
+    "recall_top5": 0.2284904184591318,
+    "mean_pred": 0.16321330235214254
+  },
+  "test_by_year": {
+    "2021": {
+      "n": 36868,
+      "positives": 6186,
+      "roc_auc": 0.8391094852354535,
+      "pr_auc": 0.574901456430676
+    },
+    "2022": {
+      "n": 36868,
+      "positives": 6271,
+      "roc_auc": 0.8382102527637088,
+      "pr_auc": 0.5698598928154287
+    },
+    "2023": {
+      "n": 36868,
+      "positives": 6132,
+      "roc_auc": 0.8346915984086689,
+      "pr_auc": 0.5543062898953666
+    },
+    "2024": {
+      "n": 37577,
+      "positives": 6161,
+      "roc_auc": 0.8412623179593066,
+      "pr_auc": 0.5590636448705564
+    },
+    "2025": {
+      "n": 36159,
+      "positives": 5934,
+      "roc_auc": 0.8396623291831877,
+      "pr_auc": 0.5686023532717309
+    }
+  },
+  "device": "cpu",
+  "n_params": 151809,
+  "epochs_run": 7,
+  "best_epoch": 2,
+  "profile": "pulse",
+  "train_rows": 629592,
+  "neg_keep_rate": 1.0,
+  "logit_shift": 0.0,
+  "total_seconds": 35.0,
+  "args": {
+    "model": "mlp_seq",
+    "profile": "pulse",
+    "data": null,
+    "panel": null,
+    "outdir": null,
+    "models_dir": null,
+    "epochs": 30,
+    "patience": 5,
+    "batch_size": 2048,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "dropout": 0.2,
+    "hidden": 64,
+    "layers": 1,
+    "mlp_hidden": "128,64,32",
+    "pos_weight": null,
+    "max_train": null,
+    "max_val": null,
+    "seed": 42,
+    "cpu": false
+  },
+  "log": [
+    "perfil pulse | modelo mlp_seq | device cpu",
+    "parâmetros treináveis: 151,809",
+    "treino 629,592 linhas (91,525 positivos; negativos mantidos 100%) | validação 111,313 | teste 184,340",
+    "época  1  perda 0.3429  val ROC-AUC 0.8333  PR-AUC 0.5420  lr 1e-03      4s",
+    "época  2  perda 0.3162  val ROC-AUC 0.8346  PR-AUC 0.5441  lr 1e-03      4s",
+    "época  3  perda 0.3145  val ROC-AUC 0.8345  PR-AUC 0.5437  lr 1e-03      5s",
+    "época  4  perda 0.3132  val ROC-AUC 0.8336  PR-AUC 0.5431  lr 5e-04      5s",
+    "época  5  perda 0.3107  val ROC-AUC 0.8339  PR-AUC 0.5436  lr 5e-04      4s",
+    "época  6  perda 0.3095  val ROC-AUC 0.8332  PR-AUC 0.5426  lr 3e-04      4s",
+    "época  7  perda 0.3068  val ROC-AUC 0.8327  PR-AUC 0.5412  lr 3e-04      4s",
+    "early stopping (sem melhora há 5 épocas)"
+  ]
+}

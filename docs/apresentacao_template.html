@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SeismicAI Pulse — apresentação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0E1A2B; --surface: #16263B; --surface2: #1E3048; --ink: #E9EEF5; --muted: #9FB0C6; --line: #2A3D57;
+  --alarm: #FF4D5A; --amber: #FFB020; --blue: #7CC7FF; --green: #5BD39A;
+  --y1: #FFFFCC; --y2: #FED976; --y3: #FD8D3C; --y4: #E31A1C; --y5: #800026;
+  --pad-x: clamp(22px, 6vw, 96px); --pad-y: clamp(20px, 5vh, 52px);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Manrope", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+a { color: var(--blue); }
+.deck { position: fixed; inset: 0; overflow: hidden; }
+.slide { position: absolute; inset: 0; display: none; flex-direction: column; padding: var(--pad-y) var(--pad-x) calc(var(--pad-y) + 28px); overflow: auto; }
+.slide.active { display: flex; }
+.slide > header { margin-bottom: clamp(10px, 2vh, 22px); }
+.slide h2 { font-size: clamp(24px, 3.4vw, 42px); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 6px; font-weight: 700; }
+.slide .lead { font-size: clamp(15px, 1.45vw, 21px); color: var(--muted); margin: 0; max-width: 64ch; line-height: 1.45; }
+.body { flex: 1; display: flex; flex-direction: column; gap: clamp(12px, 2vh, 24px); min-height: 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: clamp(14px, 2.2vw, 36px); align-items: start; }
+.cols.two { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+.cols.wide-left { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.cols.wide-right { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+@media (max-width: 820px) { .cols.wide-left, .cols.wide-right { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: clamp(14px, 1.6vw, 22px) clamp(16px, 1.8vw, 24px); }
+.card h3 { margin: 0 0 6px; font-size: clamp(16px, 1.4vw, 20px); font-weight: 700; }
+.card p, .card li { font-size: clamp(14px, 1.15vw, 17px); line-height: 1.5; color: var(--ink); margin: 0; }
+.card ul { margin: 6px 0 0; padding-left: 18px; }
+.card li + li { margin-top: 4px; }
+p.note, .muted { color: var(--muted); }
+.big { font-size: clamp(34px, 5.2vw, 76px); font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.big small { display: block; font-size: clamp(13px, 1.1vw, 16px); font-weight: 500; letter-spacing: 0; color: var(--muted); margin-top: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: clamp(13px, 1.1vw, 16px); }
+.kv b { color: var(--ink); } .kv span { color: var(--muted); }
+figure { margin: 0; }
+figure img { width: 100%; height: auto; display: block; border-radius: 10px; background: #fff; }
+figcaption { font-size: clamp(12px, 1vw, 14px); color: var(--muted); margin-top: 8px; }
+.callout { border-left: 4px solid var(--y3); background: var(--surface); padding: 12px 16px; border-radius: 0 10px 10px 0; font-size: clamp(14px, 1.2vw, 18px); line-height: 1.45; }
+.callout.alarm { border-color: var(--alarm); } .callout.blue { border-color: var(--blue); } .callout.green { border-color: var(--green); }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface2); color: var(--muted); margin-right: 6px; }
+.tag.alarm { background: rgba(255,77,90,.18); color: var(--alarm); } .tag.amber { background: rgba(255,176,32,.18); color: var(--amber); }
+.tag.blue { background: rgba(124,199,255,.18); color: var(--blue); } .tag.green { background: rgba(91,211,154,.18); color: var(--green); }
+table.t { border-collapse: collapse; width: 100%; font-size: clamp(13px, 1.1vw, 16px); }
+table.t th, table.t td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+table.t th:first-child, table.t td:first-child { text-align: left; }
+table.t th { color: var(--muted); font-weight: 600; }
+table.t tr.hi td { color: var(--ink); font-weight: 700; background: rgba(253,141,60,.10); }
+
+/* gráficos de barras (CSS) */
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 64px; align-items: center; gap: 10px; font-size: clamp(12px, 1.05vw, 15px); }
+.bar .lbl { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .track { height: 14px; background: var(--surface2); border-radius: 7px; overflow: hidden; position: relative; }
+.bar .fill { height: 100%; border-radius: 7px; background: var(--y3); transition: width .45s ease; }
+.bar .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar.hi .lbl, .bar.hi .val { color: var(--ink); font-weight: 700; }
+.bar.hi .fill { background: linear-gradient(90deg, var(--y3), var(--y4)); }
+.bar.dim .fill { background: var(--line); }
+.bars.pair .bar { grid-template-columns: minmax(140px, 36%) 1fr 110px; }
+.pair .track { background: transparent; height: 26px; display: grid; gap: 3px; }
+.pair .track i { display: block; height: 11px; border-radius: 6px; }
+.pair .track i.a { background: var(--amber); } .pair .track i.b { background: var(--alarm); }
+.pair .val { display: grid; font-size: 12px; } .pair .val span:first-child { color: var(--amber); } .pair .val span:last-child { color: var(--alarm); }
+.switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin: 0 0 10px; }
+.switch button { font: inherit; font-size: 13px; font-weight: 600; background: transparent; color: var(--muted); border: 0; padding: 7px 14px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--surface2); color: var(--ink); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); align-items: center; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+
+/* capa */
+.cover { justify-content: center; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: clamp(36px, 5vw, 72px) clamp(36px, 5vw, 72px); background-position: center; }
+.cover::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 35% 45%, rgba(14,26,43,0) 0%, rgba(14,26,43,.85) 70%); pointer-events: none; }
+.cover > * { position: relative; z-index: 1; }
+.cover h1 { font-size: clamp(42px, 8.5vw, 124px); line-height: .95; letter-spacing: -0.035em; margin: 0 0 .25em; font-weight: 800; }
+.cover .sub { font-size: clamp(17px, 2vw, 30px); color: var(--ink); font-weight: 500; margin: 0 0 1.2em; max-width: 36ch; line-height: 1.3; }
+.cover .who { color: var(--muted); font-size: clamp(13px, 1.2vw, 18px); line-height: 1.6; }
+.pulse { width: min(100%, 980px); height: clamp(60px, 12vh, 140px); display: block; margin: 0 0 clamp(8px, 2vh, 24px); }
+.pulse path { fill: none; stroke: var(--y3); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 2600; stroke-dashoffset: 2600; animation: draw 2.4s cubic-bezier(.4,.1,.2,1) .2s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .pulse path { animation: none; stroke-dashoffset: 0; } .bar .fill { transition: none; } }
+
+/* pipeline */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; counter-reset: step; }
+.flow .step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 12px; font-size: clamp(12px, 1.05vw, 15px); line-height: 1.4; position: relative; }
+.flow .step::before { counter-increment: step; content: counter(step); display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: var(--y3); color: #1a0a00; font-weight: 800; font-size: 12px; text-align: center; line-height: 22px; margin-bottom: 8px; }
+.flow .step b { display: block; margin-bottom: 2px; color: var(--ink); }
+.splits { display: flex; height: 34px; border-radius: 8px; overflow: hidden; font-size: 12px; font-weight: 600; }
+.splits div { display: flex; align-items: center; justify-content: center; color: #0E1A2B; }
+.splits .tr { background: var(--y2); } .splits .va { background: var(--y3); } .splits .te { background: var(--y4); color: #fff; }
+
+/* arquitetura */
+.arch { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: stretch; }
+.arch .box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: clamp(12px, 1.05vw, 15px); line-height: 1.4; }
+.arch .box b { display: block; color: var(--ink); margin-bottom: 4px; } .arch .box span { color: var(--muted); }
+.arch .box.hl { border-color: var(--y3); }
+.net { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
+.net .card { padding: 14px 16px; } .net .card h3 { font-size: clamp(15px, 1.3vw, 19px); } .net .card p { font-size: clamp(12.5px, 1.05vw, 15px); color: var(--muted); }
+.net .card .r { color: var(--ink); font-weight: 700; margin-top: 8px; }
+
+/* demo */
+.demo { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.demo iframe { flex: 1; width: 100%; min-height: 50vh; border: 1px solid var(--line); border-radius: 12px; background: #0b1220; }
+.demo .tools { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.demo .tools a.btn { background: var(--y3); color: #1a0a00; font-weight: 700; padding: 8px 14px; border-radius: 8px; text-decoration: none; }
+.qr { width: 92px; height: 92px; background: #fff; border-radius: 8px; padding: 6px; }
+
+/* cromo */
+.progress { position: fixed; left: 0; bottom: 0; height: 3px; width: 0; background: var(--y3); transition: width .25s; z-index: 5; }
+.chrome { position: fixed; left: 0; right: 0; bottom: 8px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; font-size: 12px; color: var(--muted); z-index: 5; pointer-events: none; }
+.chrome .nav { pointer-events: auto; display: flex; gap: 6px; }
+.chrome button { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; cursor: pointer; }
+.chrome button:hover { background: var(--surface2); }
+.overlay { position: fixed; inset: 0; background: rgba(14,26,43,.94); z-index: 20; display: none; padding: 6vh 8vw; overflow: auto; }
+.overlay.open { display: block; }
+.overlay .box { max-width: 760px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px 28px; font-size: 16px; line-height: 1.55; }
+.overlay h3 { margin: 0 0 10px; }
+.overlay kbd { background: var(--surface2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-family: inherit; font-size: 13px; }
+.notes { display: none; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+@media (max-width: 720px) {
+  .slide { padding-bottom: 64px; }
+  .bar { grid-template-columns: minmax(90px, 40%) 1fr 54px; }
+  .cover h1 { font-size: 13vw; }
+}
+@media print {
+  .deck { position: static; } .slide { display: flex !important; position: relative; height: 100vh; page-break-after: always; overflow: hidden; }
+  .chrome, .progress, .overlay { display: none !important; } .demo iframe { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 Capa -->
+<section class="slide cover" data-notes="Boa tarde. Somos a SeismicAI e vamos apresentar o Pulse: um mapa que, toda semana, mostra onde é mais provável haver um terremoto no Círculo de Fogo na semana seguinte. Em 15 minutos: o problema, os dados, as redes neurais, os resultados e o produto, com demonstração ao vivo.">
+  <svg class="pulse" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,60 L120,60 L140,58 L160,62 L180,60 L300,60 L312,52 L324,70 L334,30 L344,96 L354,18 L366,104 L378,36 L390,82 L402,50 L414,72 L428,54 L444,66 L462,58 L486,62 L520,60 L600,60 L612,56 L622,66 L634,48 L646,76 L658,54 L672,64 L690,58 L720,61 L780,60 L1000,60"/>
+  </svg>
+  <h1>SeismicAI Pulse</h1>
+  <p class="sub">A próxima semana, área por área: probabilidade de terremoto no Círculo de Fogo do Pacífico, estimada por redes neurais a partir do catálogo público do USGS.</p>
+  <p class="who">Alice De Muylder · Valmir Cerutti · Tiago Abreu<br>Redes Neurais e Deep Learning, 2026</p>
+</section>
+
+<!-- 2 Problema -->
+<section class="slide" data-notes="Ninguém prevê terremotos: dia, lugar exato e magnitude. Mas a sismicidade não é aleatória: concentra-se em regiões conhecidas e se agrupa no tempo, com réplicas por semanas e contágio para áreas vizinhas. Hoje existem catálogos (o passado) e mapas de risco de décadas. Falta o curto prazo por área. É isso que o Pulse faz, para seguradoras, defesa civil, infraestrutura crítica e jornalismo.">
+  <header><h2>Não dá para prever terremotos. Dá para medir onde eles estão mais prováveis esta semana.</h2>
+    <p class="lead">A sismicidade se concentra em regiões conhecidas e se agrupa no tempo. Entre o catálogo do que já aconteceu e os mapas de risco de décadas, falta a visão de curto prazo por área.</p></header>
+  <div class="body"><div class="cols">
+    <div class="card"><h3>O que não dá</h3><p>Dizer o dia, o lugar exato e a magnitude do próximo terremoto. Nenhum modelo faz isso, e o Pulse não promete.</p></div>
+    <div class="card"><h3>O que dá</h3><p>Usar dois fatos da sismologia estatística: a taxa de fundo de cada região é persistente, e um evento grande é seguido de réplicas por semanas, que se espalham para as áreas vizinhas.</p></div>
+    <div class="card"><h3>Para quem</h3><p>Seguradoras e resseguradoras (exposição de curto prazo), defesa civil e operadores de infraestrutura crítica — portos, energia, mineração — que priorizam inspeções e prontidão, e o jornalismo científico.</p></div>
+  </div>
+  <div class="callout">A pergunta do produto: <b>nesta semana, em quais áreas do Círculo de Fogo a atenção deve estar?</b></div></div>
+</section>
+
+<!-- 3 Pergunta -->
+<section class="slide" data-notes="Formalizamos assim: a região é dividida em células de 2 por 2 graus; o tempo em semanas. A entrada é o histórico de 52 semanas da célula e das vizinhas; a saída é a probabilidade de pelo menos um evento M maior ou igual a 4 na semana seguinte. É classificação binária probabilística, com classes desbalanceadas: 16 por cento de positivos. A pergunta de pesquisa: uma rede recorrente faz isso melhor do que estimativas estatísticas simples?">
+  <header><h2>A pergunta de pesquisa</h2>
+    <p class="lead">Uma rede neural recorrente, treinada com o histórico sísmico recente de uma área e de seus vizinhos, estima a probabilidade de terremoto M ≥ 4,0 nessa área na semana seguinte melhor do que estimativas estatísticas simples?</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><h3>Definição formal</h3><ul>
+      <li>Região dividida em células <b>c</b> de 2° × 2°; tempo em semanas <b>t</b> (segunda a domingo, UTC).</li>
+      <li>Entrada: <b>x</b><sub>c, t−51…t</sub> — 52 semanas × 10 variáveis da célula e dos vizinhos — mais atributos fixos da célula.</li>
+      <li>Saída: <b>y</b><sub>c, t+1</sub> = 1 se houver ≥ 1 evento M ≥ 4,0 na célula na semana t+1.</li>
+      <li>Modelo: <b>p̂</b> = f<sub>θ</sub>(x, s) ∈ [0, 1], a probabilidade do evento.</li>
+      <li>Tipo: classificação binária <b>probabilística</b>, classes desbalanceadas (16 % de positivos).</li></ul></div>
+    <div class="card"><h3>Fora do escopo</h3><ul>
+      <li>Momento exato, local exato ou magnitude de um terremoto.</li>
+      <li>Sistema de alerta ou substituição de órgãos oficiais.</li>
+      <li>Estimar danos ou intensidade sentida.</li></ul>
+      <p class="note" style="margin-top:10px">Por que M ≥ 4: é a faixa sentida pela população, com dano leve, e tem volume de dados; o limiar mais alto (M ≥ 5) entra no alarme.</p></div>
+  </div></div>
+</section>
+
+<!-- 4 Dados -->
+<section class="slide" data-notes="Fonte: USGS ComCat via FDSN. Catálogo global M maior ou igual a 4 de 2000 a 2025: 358 mil eventos, 74 por cento no Círculo de Fogo. Começamos em 2000 porque antes a rede sismográfica não registrava M4 em áreas remotas. 709 células ativas, 1.358 semanas. O diagnóstico de completude pela lei de Gutenberg-Richter mostrou que a detecção melhorou ao longo do tempo, sobretudo na Indonésia: é uma limitação declarada.">
+  <header><h2>Dados: o catálogo público do USGS, 2000–2025</h2>
+    <p class="lead">Todos os terremotos M ≥ 4,0 do planeta, baixados pelo serviço FDSN do USGS e recortados ao Círculo de Fogo.</p></header>
+  <div class="body"><div class="cols">
+    <div class="stat"><div class="big">358.672<small>eventos M ≥ 4,0 no mundo, jan/2000 a dez/2025</small></div></div>
+    <div class="stat"><div class="big">73,8 %<small>deles dentro das 12 caixas do Círculo de Fogo</small></div></div>
+    <div class="stat"><div class="big">709<small>células de 2° × 2° com histórico suficiente</small></div></div>
+    <div class="stat"><div class="big">1.358<small>semanas, de segunda a domingo (UTC)</small></div></div>
+  </div>
+  <div class="cols two">
+    <div class="card"><h3>Limpeza</h3><p>Só <i>earthquake</i> (sem explosões ou erupções); sem duplicatas; sem valores faltantes de tempo, posição, profundidade ou magnitude; profundidade negativa truncada em zero. Cada evento recebe uma célula e uma semana.</p></div>
+    <div class="card"><h3>Completude do catálogo</h3><p>Pela lei de Gutenberg–Richter, a razão M 4,0–4,4 / M ≥ 4,5 deveria ser ~2 e constante. Ela cresce com o tempo (Indonésia: 0,58 em 2000–05 → 1,23 em 2015+): a detecção melhorou. Isso explica a alta de positivos de 14,5 % para 16,6 % e é tratado como limitação.</p></div>
+  </div></div>
+</section>
+
+<!-- 5 Picos -->
+<section class="slide" data-notes="Este é o gráfico da célula mais ativa, o Mar de Banda. Os três picos são sequências de réplicas de terremotos rasos: M5,8 em 2008, M5,8 em 2014 e o dubleto M7,1 de novembro de 2023. Não são outliers: são o fenômeno que o modelo aprende. O aparente crescimento é efeito de três pontos: em 1998, antes da janela, um M7,0 na mesma célula deu pico maior que 2008 e 2014. Testamos em todas as células: o tamanho das sequências é explicado por magnitude e profundidade; a tendência temporal cai pela metade ao contar só a faixa bem detectada, o que é melhora de instrumentação; o resíduo fica como pergunta aberta. E testamos a ideia de ciclo, terremotos maiores a intervalos maiores: em mais de 5 mil pares consecutivos, a espera não prevê a magnitude do próximo, e os intervalos seguem um processo de Poisson. Em regiões inteiras, Gutenberg-Richter não tem memória.">
+  <header><h2>Os picos são réplicas — e são o sinal, não ruído</h2>
+    <p class="lead">Célula mais ativa (Mar de Banda, −7°, 129°): eventos M ≥ 4 por semana. Cada pico é a sequência de réplicas de um terremoto raso.</p></header>
+  <div class="body">
+    <figure><img src="{{IMG:banda_semana}}" alt="Eventos M≥4 por semana na célula do Mar de Banda, com picos em 2008, 2014 e 2023"><figcaption>2008: M5,8 a 10 km · 2014: M5,8 a 7 km · 2023: dubleto M7,1 + M6,7 a 6–10 km (39 réplicas M ≥ 4,5 em 28 dias). Em 1998, antes da janela, um M7,0 raso deu pico maior que 2008 e 2014.</figcaption></figure>
+    <div class="cols wide-left">
+      <div class="card"><h3>Em todas as células: 5.914 sequências, M ≥ 5,5</h3>
+        <table class="t"><thead><tr><th>Réplicas contadas</th><th>α (por M)</th><th>γ (raso)</th><th>β (por década)</th><th>t</th></tr></thead><tbody>
+          <tr><td>todas, M ≥ 4</td><td>0,47</td><td>+0,17</td><td>+0,068</td><td>9,6</td></tr>
+          <tr class="hi"><td>faixa completa, M ≥ 4,5</td><td>0,42</td><td>+0,20</td><td>+0,038</td><td>6,1</td></tr>
+        </tbody></table>
+        <p class="note" style="margin-top:8px">log₁₀(réplicas em 28 dias) = a + α·(M − 5,5) + γ·[raso] + β·(ano − 2000)/10. Båth: 1,05 (esperado 1,2). Omori: p ≈ 1,0–1,8 nas maiores sequências.</p></div>
+      <div>
+        <div class="callout" style="margin-bottom:10px">O tamanho de uma sequência é explicado por <b>magnitude e profundidade</b>. A tendência temporal cai 45 % ao contar só a faixa bem detectada: melhora de instrumentação. O resíduo (≈ +9 %/década) fica como pergunta aberta.</div>
+        <div class="card"><h3>E um ciclo — maiores a intervalos maiores?</h3><p>Em 5.287 pares de principais consecutivos: a espera não prevê a magnitude do próximo (ρ = −0,07), a magnitude não prevê a espera (−0,03), intervalos e magnitudes não crescem ao longo das sequências, e os intervalos seguem Poisson (CV 0,87). Máxima anual: sem tendência (ρ = −0,36, p = 0,07). Gutenberg–Richter não tem memória.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 Preparação -->
+<section class="slide" data-notes="O pipeline: download, limpeza, grade, agregação semanal com vizinhos, features, rótulo e divisão temporal. A divisão é pela semana do rótulo: treino 2001 a 2017, validação 2018 a 2020, teste 2021 a 2025. Tudo que o modelo sabe de uma célula, inclusive a taxa histórica e a padronização, vem só do treino. Sem vazamento.">
+  <header><h2>Preparação: da linha do catálogo ao par (célula, semana)</h2>
+    <p class="lead">Mesmo código no treino e no produto; o motor de inferência reproduz as probabilidades do treino com diferença de 10⁻⁹.</p></header>
+  <div class="body">
+    <div class="flow">
+      <div class="step"><b>Download</b>blocos anuais pelo FDSN; divide se passar de 20 mil eventos</div>
+      <div class="step"><b>Limpeza</b>tipo, duplicatas, nulos, magnitude, período</div>
+      <div class="step"><b>Grade</b>células 2° × 2°; ativas = ≥ 10 eventos no treino, dentro das caixas</div>
+      <div class="step"><b>Semanas</b>agregados por célula: eventos, magnitudes, energia, profundidade, M ≥ 5, M ≥ 6</div>
+      <div class="step"><b>Vizinhos</b>soma das 8 células em volta, na grade global</div>
+      <div class="step"><b>Features</b>sequência de 52 semanas (LSTM) e janelas 1/4/12/52 (MLP)</div>
+      <div class="step"><b>Rótulo e divisão</b>y = evento na semana t+1; split pela semana do rótulo</div>
+    </div>
+    <div class="cols wide-left">
+      <div class="card"><h3>Divisão temporal, sem vazamento</h3>
+        <div class="splits"><div class="tr" style="flex:629592">treino 2001–2017 · 629.592</div><div class="va" style="flex:111313">val. 111.313</div><div class="te" style="flex:184340">teste 2021–25 · 184.340</div></div>
+        <p class="note" style="margin-top:8px">Positivos: 14,5 % · 15,9 % · 16,6 %. Taxa histórica, células ativas e padronização só com o treino; limiar de decisão escolhido na validação.</p></div>
+      <div class="card"><h3>Escolhas que importam</h3><ul>
+        <li>Réplicas mantidas: são a dinâmica real de curto prazo.</li>
+        <li>Perda sem ponderação de classes: probabilidades calibradas.</li>
+        <li>Métricas: PR-AUC e ROC-AUC + calibração (acurácia enganaria: 84 % dizendo sempre "não").</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 Baselines -->
+<section class="slide" data-notes="Antes de qualquer rede, quatro baselines. Persistência: se teve esta semana, vai ter na próxima. Climatologia: a taxa histórica da célula. Taxa recente: a fração das últimas 52 semanas com evento. Combinado: a média das duas. A taxa histórica sozinha já dá ROC-AUC 0,83: saber onde explica a maior parte do problema. O combinado, 0,836 e 0,552, é a meta que a Fase 1 fixou para a rede.">
+  <header><h2>Primeiro, a régua: baselines estatísticos</h2>
+    <p class="lead">A taxa histórica da célula sozinha chega a ROC-AUC 0,830. A rede só tem valor se acrescentar o <i>quando</i> ao <i>onde</i>.</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><div class="switch" data-chart="base"><button aria-pressed="true" data-m="roc">ROC-AUC</button><button data-m="pr">PR-AUC</button></div>
+      <div class="bars" id="chart-base"></div></div>
+    <div>
+      <div class="callout" style="margin-bottom:14px"><b>Meta da Fase 1:</b> superar o Combinado no teste — ROC-AUC 0,836 e PR-AUC 0,552 — com boa calibração.</div>
+      <div class="card"><h3>O que cada um mede</h3><ul>
+        <li><b>Persistência</b>: só o agrupamento temporal imediato.</li>
+        <li><b>Climatologia</b>: só o <i>onde</i> (taxa histórica no treino).</li>
+        <li><b>Taxa recente</b>: só o <i>quando</i> (últimas 52 semanas).</li>
+        <li><b>Combinado</b>: a média simples dos dois.</li></ul></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 8 Redes -->
+<section class="slide" data-notes="Cinco redes, cada uma com um papel. A LSTM é a principal: lê a sequência de 52 semanas e concatena os atributos fixos. A MLP sobre janelas e a MLP-seq sobre a sequência achatada isolam o valor da recorrência. A RBM é não supervisionada: aprende sem rótulos. A Hopfield é a camada de saída: memória associativa que decide o estado de alerta. Treino com Adam, entropia cruzada sem ponderação, early stopping pela PR-AUC de validação.">
+  <header><h2>Cinco redes, cinco papéis</h2>
+    <p class="lead">Uma estima a probabilidade; duas testam se a recorrência importa; uma aprende sem rótulos; uma decide o estado de alerta.</p></header>
+  <div class="body"><div class="net">
+    <div class="card"><span class="tag alarm">principal</span><h3>LSTM</h3><p>Recorrente: lê as 52 semanas mantendo um estado interno; o estado final é concatenado aos 5 atributos fixos da célula → densa 64 → probabilidade.</p><p class="r">24 mil parâmetros · 26 épocas · 12 min (CPU)</p></div>
+    <div class="card"><span class="tag">comparação</span><h3>MLP (janelas)</h3><p>Densa 128 → 64 → 32 (ReLU, batch norm, dropout) sobre 45 resumos da sequência em janelas de 1, 4, 12 e 52 semanas.</p><p class="r">17 mil parâmetros · 20 épocas · 68 s</p></div>
+    <div class="card"><span class="tag">comparação</span><h3>MLP-seq</h3><p>Densa 256 → 64 sobre as mesmas entradas da LSTM, achatadas (525 valores): mesma informação, sem recorrência.</p><p class="r">152 mil parâmetros · melhor época: 2</p></div>
+    <div class="card"><span class="tag blue">não supervisionada</span><h3>RBM</h3><p>Máquina de Boltzmann Restrita, 45 visíveis × 64 ocultas, treinada sem rótulos por divergência contrastiva. A energia livre mede quão atípica é a semana.</p><p class="r">10 épocas · 18 s</p></div>
+    <div class="card"><span class="tag amber">saída</span><h3>Hopfield</h3><p>Memória associativa de 26 bits com 3 protótipos: NORMAL, ATENÇÃO, ALARME. O alarme é associado ao limiar M ≥ 5.</p><p class="r">regra de projeção · dinâmica assíncrona</p></div>
+  </div>
+  <div class="callout blue">Treino: entropia cruzada <b>sem</b> ponderação de classes (para manter as probabilidades calibradas), Adam, lotes de 2.048, early stopping pela PR-AUC de validação, limiar de decisão escolhido na validação. Padronização ajustada só no treino.</div></div>
+</section>
+
+<!-- 9 Resultados -->
+<section class="slide" data-notes="O resultado principal. A LSTM supera a meta em todas as métricas: ROC-AUC 0,841, PR-AUC 0,571, menor Brier, e 76 por cento de acerto no top 5 por cento. Estável nos cinco anos do teste. Mas repare: a MLP empata, a regressão logística fica a dois milésimos. Os ganhos são reais e pequenos. Vamos ver onde eles acontecem.">
+  <header><h2>Resultados no teste (2021–2025): a LSTM supera a meta</h2>
+    <p class="lead">184.340 amostras, 16,6 % positivas. A LSTM é a melhor em todas as métricas, estável nos cinco anos (ROC-AUC 0,838–0,844).</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><div class="switch" data-chart="models"><button aria-pressed="true" data-m="roc">ROC-AUC</button><button data-m="pr">PR-AUC</button><button data-m="top5">Precisão top 5 %</button><button data-m="brier">Brier (menor é melhor)</button></div>
+      <div class="bars" id="chart-models"></div></div>
+    <div>
+      <div class="stat" style="margin-bottom:12px"><div class="big">76 %<small>das 5 % células sinalizadas como mais prováveis em cada semana têm terremoto M ≥ 4 na semana seguinte (climatologia: 70,5 %)</small></div></div>
+      <div class="callout green"><b>Meta superada:</b> ROC-AUC 0,841 vs 0,836 · PR-AUC 0,571 vs 0,552 · Brier 0,1012 vs 0,1033.</div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 10 Estratos -->
+<section class="slide" data-notes="Separando o teste por situação da célula. O ganho cresce com a atividade recente: após um M5 na célula, a PR-AUC sobe de 0,682 para 0,753; com M5 nos vizinhos, mais 0,044; nas células historicamente quietas, quase triplica. É exatamente onde a taxa histórica não tem nada a dizer e só a atividade recente é pista. As hipóteses H1 e H2 se confirmam.">
+  <header><h2>Onde a rede ganha: nas sequências em curso</h2>
+    <p class="lead">Climatologia (amarelo) contra LSTM (vermelho), por situação da célula na semana de entrada.</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><div class="switch" data-chart="strata"><button aria-pressed="true" data-m="pr">PR-AUC</button><button data-m="roc">ROC-AUC</button></div>
+      <div class="legend"><span><i style="background:var(--amber)"></i>Climatologia</span><span><i style="background:var(--alarm)"></i>LSTM</span></div>
+      <div class="bars pair" id="chart-strata" style="margin-top:8px"></div></div>
+    <div>
+      <div class="card" style="margin-bottom:12px"><h3>H1 — agrupamento temporal</h3><p>Após um M ≥ 5 na célula: PR-AUC 0,682 → 0,753 (+0,071); ROC-AUC 0,748 → 0,799. A rede reconhece a sequência de réplicas e eleva a probabilidade enquanto ela dura.</p></div>
+      <div class="card" style="margin-bottom:12px"><h3>H2 — contágio espacial</h3><p>M ≥ 5 nos vizinhos: +0,044 de PR-AUC. Os eventos nos vizinhos são a 3ª variável mais importante da LSTM.</p></div>
+      <div class="card"><h3>Células quietas acordando</h3><p>PR-AUC ×2,7 (0,025 → 0,068). Em valor absoluto é pouco — 1,7 % de positivos —, mas é onde a taxa histórica é cega.</p></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 11 Calibração -->
+<section class="slide" data-notes="Calibração: quando a LSTM diz 83 por cento, acontece em 84. Quando diz 59, em 62. Nas mesmas células, a climatologia diria 60 onde ocorre 84: ela não enxerga a sequência em curso. Esse era o segundo critério de sucesso da Fase 1, e é o que permite usar a probabilidade direto no produto.">
+  <header><h2>As probabilidades são confiáveis</h2>
+    <p class="lead">Critério de sucesso nº 2 da Fase 1: quando o modelo diz 30 %, deve acontecer em ~30 % dos casos.</p></header>
+  <div class="body"><div class="cols wide-right">
+    <div>
+      <table class="t"><thead><tr><th>LSTM diz</th><th>acontece</th><th>climatologia diria</th><th>n</th></tr></thead><tbody>
+        <tr><td>14 %</td><td>15 %</td><td>14 %</td><td>33.522</td></tr>
+        <tr><td>39 %</td><td>40 %</td><td>34 %</td><td>18.679</td></tr>
+        <tr><td>59 %</td><td>62 %</td><td>49 %</td><td>7.655</td></tr>
+        <tr class="hi"><td>83 %</td><td>84 %</td><td>60 %</td><td>5.349</td></tr>
+      </tbody></table>
+      <div class="callout" style="margin-top:14px">A climatologia subestima justamente onde o risco é maior: prevê 60 % onde se observa 84 %. A LSTM acerta a faixa inteira.</div>
+    </div>
+    <figure><img src="{{IMG:fig_calibration}}" alt="Diagrama de calibração: curvas dos modelos próximas da diagonal, exceto a climatologia"><figcaption>Fração observada de positivos por faixa de probabilidade prevista, no teste. Diagonal = calibração perfeita.</figcaption></figure>
+  </div></div>
+</section>
+
+<!-- 12 Aprendizado -->
+<section class="slide" data-notes="O que as redes aprenderam. Importância por permutação: a taxa histórica vale 0,105; a contagem recente de eventos, 0,059; o resto é pequeno. Onde vale dez vezes mais que quando. E LSTM e MLP empatam porque a informação temporal útil está em estatísticas simples: quantos eventos, há quanto tempo. A recorrência não acha estrutura além disso. Isso é a resposta honesta à pergunta de pesquisa.">
+  <header><h2>O que as redes aprenderam: <i>onde</i> vale dez vezes mais que <i>quando</i></h2>
+    <p class="lead">Importância por permutação na LSTM (queda de ROC-AUC ao embaralhar a variável no teste).</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><div class="bars" id="chart-imp"></div>
+      <p class="note" style="margin-top:10px">A MLP chega à mesma hierarquia: taxa histórica 0,105; depois n_52w, n_12w, meanmag_52w, todas abaixo de 0,005. Dentro do "quando", o que importa é a contagem de eventos, não magnitude nem profundidade.</p></div>
+    <div>
+      <div class="card" style="margin-bottom:12px"><h3>LSTM ≈ MLP: um resultado, não uma derrota</h3><p>LSTM 0,841 / 0,571 · MLP 0,841 / 0,569 · MLP-seq 0,839 / 0,566. A informação temporal útil cabe em estatísticas simples da sequência, que as janelas já contêm. A recorrência não encontra estrutura além disso.</p></div>
+      <div class="card"><h3>Consequências</h3><ul><li>Produto: a MLP treina em 68 s com o mesmo resultado da LSTM (12 min).</li><li>Ciência: a rede supera os baselines por combinar melhor <i>onde</i> e <i>quando</i>, não por "aprender a sequência".</li><li>Regressão logística a 0,002: pouca não-linearidade a explorar nesta formulação.</li></ul></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 13 Mais variáveis -->
+<section class="slide" data-notes="Como o ganho é pequeno, testamos se faltavam variáveis: 22 novas, com motivação física: memória de 2 e 5 anos, anel de 5 por 5 células, atividade do segmento, resolução diária, uma taxa de réplicas tipo ETAS e proxies de composição. Resultado: ROC-AUC mais 0,001, PR-AUC mais 0,001. As 22 sozinhas recuperam 99 por cento do desempenho das 45. É redundância: o teto está na informação do catálogo. O único sinal novo é a memória longa, que ajuda um pouco nas células quietas.">
+  <header><h2>Mais variáveis não ajudam: o teto está no catálogo</h2>
+    <p class="lead">22 variáveis novas, com motivação física, nos mesmos splits: memória de 2 e 5 anos, anel de 5 × 5, segmento, resolução diária, taxa de réplicas tipo ETAS, proxy do valor-b, fração de eventos profundos, aceleração.</p></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><table class="t"><thead><tr><th>Conjunto (gradient boosting)</th><th>nº</th><th>ROC-AUC</th><th>PR-AUC</th><th>PR-AUC quietas</th></tr></thead><tbody>
+      <tr><td>45 variáveis base</td><td>45</td><td>0,8412</td><td>0,5694</td><td>0,066</td></tr>
+      <tr class="hi"><td>base + 22 extras</td><td>67</td><td>0,8420</td><td>0,5707</td><td>0,073</td></tr>
+      <tr><td>só as 22 extras</td><td>22</td><td>0,8389</td><td>0,5637</td><td>0,071</td></tr>
+    </tbody></table>
+    <p class="note" style="margin-top:10px">Gradient boosting extrai o que uma tabela tem; nas 45 base reproduz as redes (0,841 / 0,569). Importância: taxa histórica +0,063; nº de semanas ativas +0,008; melhor variável nova (<code>n_104w</code>) +0,003.</p></div>
+    <div>
+      <div class="stat" style="margin-bottom:12px"><div class="big">+0,001<small>de ROC-AUC e de PR-AUC com 22 variáveis a mais — dentro do ruído</small></div></div>
+      <div class="card"><h3>O que isso diz</h3><ul><li>As 22 sozinhas recuperam 99 % do desempenho das 45: descrevem a mesma informação de outro jeito.</li><li>O único sinal novo é a memória longa, nas células quietas (+10 % relativo): o passado distante é a única pista ali.</li><li>Nem arquitetura nem variáveis: o que falta — terremotos sem precursores — não está no catálogo.</li></ul></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 14 RBM -->
+<section class="slide" data-notes="A RBM nunca viu um rótulo. Mesmo assim, a energia livre dela, calibrada com um único parâmetro, dá ROC-AUC 0,79: o modelo descobre sozinho que semana atípica é semana de risco. Com uma regressão logística sobre as 64 unidades ocultas, empata com o baseline combinado.">
+  <header><h2>RBM: o que se aprende sem nenhum rótulo</h2>
+    <p class="lead">Treinada por divergência contrastiva para dar energia baixa às configurações reais das features. A energia livre de uma semana mede quão atípica ela é.</p></header>
+  <div class="body"><div class="cols wide-right">
+    <div>
+      <div class="stat" style="margin-bottom:12px"><div class="big">0,792<small>ROC-AUC só com a energia livre, sem rótulos (persistência: 0,646; climatologia: 0,830)</small></div></div>
+      <div class="card"><h3>Leitura</h3><ul><li>O padrão raro na distribuição das features é o das células ativas: atípico = arriscado.</li><li>Regressão logística sobre as 64 ocultas: 0,836 / 0,554, empate com o Combinado; a compressão binária perde um pouco frente às features originais (0,839 / 0,565).</li><li>Treino: 10 épocas, 18 s; erro de reconstrução 0,030 → 0,018.</li></ul></div>
+    </div>
+    <figure><img src="{{IMG:fig_rbm_weights}}" alt="Mapa de calor dos pesos da RBM"><figcaption>Pesos W (45 features visíveis × 64 unidades ocultas) após o treino.</figcaption></figure>
+  </div></div>
+</section>
+
+<!-- 15 Hopfield -->
+<section class="slide" data-notes="A Hopfield é a saída do produto. 26 bits: limiares sobre a probabilidade da LSTM, a atividade recente, os vizinhos e a magnitude máxima. Três protótipos. O protótipo de ALARME acende exatamente os bits de magnitude: M5 nos últimos 3 meses, M5,5 no ano, evento grande há menos de 8 semanas. Em precisão, o alarme multiplica a taxa base por 2,4, mas um limiar simples na probabilidade faz melhor no mesmo ponto de operação. Uma memória binária não supera uma probabilidade calibrada, e não tinha como. O valor dela é dar um estado discreto, legível, com o alarme gatilhado pela magnitude.">
+  <header><h2>Hopfield: a camada de saída, com o limiar de magnitude</h2>
+    <p class="lead">Uma memória associativa guarda três protótipos; o estado da célula relaxa até o mais próximo. O ALARME só acende em padrões associados a M ≥ 5.</p></header>
+  <div class="body"><div class="cols wide-left">
+    <figure><img src="{{IMG:fig_hopfield_prototypes}}" alt="Protótipos da rede de Hopfield: bits ativos por estado"><figcaption>Protótipos aprendidos na validação: o ALARME acende os bits de magnitude (maxmag_12w ≥ 5, maxmag_52w ≥ 5,5, evento grande há ≤ 8 semanas) além dos de atividade.</figcaption></figure>
+    <div>
+      <table class="t"><thead><tr><th>Decisor (alarme = M ≥ 5)</th><th>precision</th><th>recall</th><th>alarmes</th></tr></thead><tbody>
+        <tr><td>taxa base</td><td>0,023</td><td>—</td><td>—</td></tr>
+        <tr class="hi"><td>Hopfield</td><td>0,056</td><td>0,279</td><td>11,4 %</td></tr>
+        <tr><td>limiar p ≥ 0,381 (mesma fração)</td><td>0,092</td><td>0,483</td><td>12,1 %</td></tr>
+      </tbody></table>
+      <div class="callout alarm" style="margin-top:12px">Como classificador, perde para um limiar bem escolhido — e não tinha como ganhar. Como saída, entrega três estados discretos, legíveis e robustos a bits faltantes, com o alarme gatilhado pela magnitude. Acurácia nos 3 estados: 74,7 %; estados espúrios: 10,7 %; 75 % dos M ≥ 5 do teste têm assinatura recente.</div>
+    </div>
+  </div></div>
+</section>
+
+<!-- 16 Produto -->
+<section class="slide" data-notes="Como o modelo virou produto. O motor de inferência em Python baixa os eventos novos do USGS, calcula a semana corrente com o mesmo código do treino, aplica a LSTM e a Hopfield e grava um documento no Firestore. O site no Firebase Hosting lê esse documento e desenha o mapa. Rodar o publicador toda semana mantém o produto vivo sem novo deploy. E há o app Streamlit para uso local.">
+  <header><h2>Produto: do modelo ao mapa semanal</h2>
+    <p class="lead">O motor de inferência reproduz o modelo avaliado; o Firebase entrega o resultado como um serviço público.</p></header>
+  <div class="body">
+    <div class="arch">
+      <div class="box"><b>USGS</b><span>feed público: eventos novos desde o último do catálogo</span></div>
+      <div class="box hl"><b>predict.py</b><span>features da semana corrente (mesmo código do treino) → LSTM → Hopfield → RBM</span></div>
+      <div class="box hl"><b>publish_firebase.py</b><span>um documento por semana: 709 células com p, estado e atividade + eventos (~100 KB)</span></div>
+      <div class="box"><b>Cloud Firestore</b><span>weeks/{semana}, meta/latest; leitura pública, escrita só pelo pipeline</span></div>
+      <div class="box"><b>Firebase Hosting</b><span>site estático: mapa, seletor de semana, ranking, detalhe, métricas</span></div>
+    </div>
+    <div class="cols two">
+      <div class="card"><h3>O que o usuário vê</h3><ul><li>Mapa do Pacífico: cada célula colorida pela probabilidade e contornada pelo estado (vermelho = ALARME, laranja = ATENÇÃO).</li><li>Semana corrente e as 52 semanas do teste, com "o que aconteceu" sobreposto e acertos no top 5 %.</li><li>Ranking, detalhe ao clicar, métricas e aviso de uso responsável.</li></ul></div>
+      <div class="card"><h3>Operação</h3><ul><li><code>publish_firebase.py --feed</code> toda semana: o site atualiza sem novo deploy.</li><li>Sem re-treino: o modelo é o mesmo avaliado no teste (diferença de 10⁻⁹).</li><li>App Streamlit para uso local, com 2 anos de histórico por célula.</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 Demo -->
+<section class="slide" data-notes="Demonstração ao vivo. Selo Firestore e semana corrente; KPIs de alarme e atenção; clicar na célula de maior probabilidade; trocar para uma semana do teste de 2022 e mostrar os círculos do que aconteceu sobre as células quentes e o acerto no top 5 por cento. Plano B: o app Streamlit, que funciona offline.">
+  <header><h2>Demonstração: deep-learning-terremoto.web.app</h2></header>
+  <div class="demo">
+    <div class="tools"><a class="btn" href="https://deep-learning-terremoto.web.app" target="_blank" rel="noopener">Abrir o site em nova aba</a>
+      <span class="muted">Roteiro: semana corrente → KPIs → célula mais provável → uma semana do teste com "o que aconteceu" → voltar.</span>
+      <img class="qr" src="{{IMG:qr}}" alt="QR code do site"></div>
+    <iframe data-src="https://deep-learning-terremoto.web.app" title="SeismicAI Pulse — site" loading="lazy" referrerpolicy="no-referrer"></iframe>
+  </div>
+</section>
+
+<!-- 18 Limitações -->
+<section class="slide" data-notes="Limitações, com honestidade. Os ganhos são reais mas pequenos: a maior parte da informação é geográfica. O catálogo tem completude variável e mistura tipos de magnitude. Células de 2 graus e semanas são grosseiras; um em cada quatro M5 chega sem assinatura. Não há física de falhas. E o aviso obrigatório: finalidade acadêmica, não é sistema de alerta, não substitui os órgãos oficiais.">
+  <header><h2>Limitações e uso responsável</h2></header>
+  <div class="body"><div class="cols">
+    <div class="card"><h3>Ganhos pequenos</h3><p>Décimos de ponto de ROC-AUC sobre a taxa histórica. A maior parte da informação é <i>onde</i>; a rede acrescenta o <i>quando</i>, nas horas certas.</p></div>
+    <div class="card"><h3>Catálogo</h3><p>Completude variável no espaço e no tempo (detecção melhorou; Indonésia suspeita) e tipos de magnitude diferentes tratados como uma escala.</p></div>
+    <div class="card"><h3>Resolução</h3><p>Células de 2° (~220 km) e semanas são grosseiras. Um em cada quatro M ≥ 5 chega sem nenhuma assinatura recente: não há padrão a reconhecer.</p></div>
+    <div class="card"><h3>Sem física</h3><p>Nenhum modelo de falhas, tensões ou mecanismos focais; só estatística do catálogo.</p></div>
+  </div>
+  <div class="callout alarm">O SeismicAI Pulse tem finalidade acadêmica e experimental. Seus resultados são estimativas estatísticas produzidas a partir dos dados e das hipóteses do projeto. Ele <b>não</b> é um sistema oficial de alerta, <b>não</b> faz previsão determinística de terremotos e <b>não</b> substitui as instituições responsáveis pelo monitoramento sísmico.</div></div>
+</section>
+
+<!-- 19 Conclusão -->
+<section class="slide" data-notes="Para fechar: a pergunta de pesquisa tem resposta afirmativa e quantificada; o ganho é temporal e localizado; a arquitetura importa pouco, as features importam muito; a RBM mostra que o sinal existe até sem rótulos; a Hopfield entrega um estado legível. Próximos passos: grade de 1 grau, horizonte de 3 dias, completude por segmento, prever contagem de eventos e comparar com ETAS. Obrigado.">
+  <header><h2>O que fica</h2></header>
+  <div class="body"><div class="cols wide-left">
+    <div class="card"><ol style="margin:0;padding-left:20px;font-size:clamp(14px,1.2vw,18px);line-height:1.55">
+      <li>A LSTM supera o melhor baseline estatístico em todas as métricas (0,841 / 0,571 vs 0,836 / 0,552), com probabilidades calibradas.</li>
+      <li>O ganho é temporal e localizado: semanas após eventos grandes e células quietas que despertam, onde a taxa histórica é cega.</li>
+      <li>Nem arquitetura nem mais variáveis mudam o resultado: <i>onde</i> vale dez vezes mais que <i>quando</i>, e o teto está no catálogo.</li>
+      <li>A RBM encontra o sinal sem rótulos; a Hopfield entrega um estado de alerta legível, gatilhado pela magnitude.</li>
+      <li>O produto usa exatamente o modelo avaliado e se atualiza toda semana com o feed do USGS.</li></ol></div>
+    <div>
+      <div class="card" style="margin-bottom:12px"><h3>Próximos passos</h3><ul><li>Grade de 1° e horizonte de 3 dias.</li><li>Completude por segmento (Indonésia a partir de 2006).</li><li>Prever o número esperado de eventos — onde a LSTM teria mais a dizer.</li><li>Comparar com o modelo ETAS, padrão da sismologia estatística.</li><li>Publicação semanal agendada e API para seguradoras e órgãos públicos.</li></ul></div>
+      <div class="callout green">Obrigado. Perguntas?<br><span class="muted">deep-learning-terremoto.web.app · código e dados no repositório do projeto</span></div>
+    </div>
+  </div></div>
+</section>
+
+</div>
+
+<div class="progress" id="progress"></div>
+<div class="chrome">
+  <div class="nav"><button id="prev" aria-label="slide anterior">←</button><button id="next" aria-label="próximo slide">→</button><button id="help" aria-label="ajuda">?</button></div>
+  <div id="counter">1 / 19</div>
+</div>
+<div class="overlay" id="notes"><div class="box"><h3 id="notes-title">Notas</h3><div id="notes-body"></div><p class="muted" style="margin-top:14px;font-size:13px">Pressione <kbd>N</kbd> ou <kbd>Esc</kbd> para fechar.</p></div></div>
+<div class="overlay" id="helpbox"><div class="box"><h3>Navegação</h3>
+  <p><kbd>→</kbd> <kbd>Espaço</kbd> <kbd>PgDn</kbd> próximo · <kbd>←</kbd> <kbd>PgUp</kbd> anterior · <kbd>Home</kbd> / <kbd>End</kbd> primeiro / último</p>
+  <p><kbd>F</kbd> tela cheia · <kbd>N</kbd> notas do apresentador · <kbd>?</kbd> esta ajuda · <kbd>Esc</kbd> fecha</p>
+  <p>Toque: deslize para os lados. O endereço (#n) guarda o slide atual: dá para compartilhar um slide específico. <kbd>Ctrl</kbd>+<kbd>P</kbd> imprime um slide por página.</p></div></div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll(".slide")];
+  const n = slides.length;
+  let cur = Math.min(Math.max((parseInt(location.hash.slice(1), 10) || 1) - 1, 0), n - 1);
+
+  function show(i) {
+    cur = Math.min(Math.max(i, 0), n - 1);
+    slides.forEach((s, k) => s.classList.toggle("active", k === cur));
+    document.getElementById("progress").style.width = `${(100 * (cur + 1)) / n}%`;
+    document.getElementById("counter").textContent = `${cur + 1} / ${n}`;
+    history.replaceState(null, "", `#${cur + 1}`);
+    const fr = slides[cur].querySelector("iframe[data-src]");
+    if (fr && !fr.src) fr.src = fr.dataset.src;          // demo: carrega o site só quando o slide abre
+    slides[cur].scrollTop = 0;
+    if (notes.classList.contains("open")) renderNotes();
+  }
+  const notes = document.getElementById("notes"), help = document.getElementById("helpbox");
+  function renderNotes() {
+    document.getElementById("notes-title").textContent = `Notas — slide ${cur + 1}`;
+    document.getElementById("notes-body").textContent = slides[cur].dataset.notes || "(sem notas)";
+  }
+  document.getElementById("prev").onclick = () => show(cur - 1);
+  document.getElementById("next").onclick = () => show(cur + 1);
+  document.getElementById("help").onclick = () => help.classList.toggle("open");
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "IFRAME") return;
+    const k = e.key;
+    if (k === "ArrowRight" || k === " " || k === "PageDown" || k === "Enter") { e.preventDefault(); show(cur + 1); }
+    else if (k === "ArrowLeft" || k === "PageUp") { e.preventDefault(); show(cur - 1); }
+    else if (k === "Home") show(0); else if (k === "End") show(n - 1);
+    else if (k === "f" || k === "F") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+    else if (k === "n" || k === "N") { notes.classList.toggle("open"); renderNotes(); }
+    else if (k === "?") help.classList.toggle("open");
+    else if (k === "Escape") { notes.classList.remove("open"); help.classList.remove("open"); }
+  });
+  let tx = null;
+  document.addEventListener("touchstart", (e) => { tx = e.changedTouches[0].clientX; }, { passive: true });
+  document.addEventListener("touchend", (e) => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; tx = null;
+    if (Math.abs(dx) > 60) show(cur + (dx < 0 ? 1 : -1)); }, { passive: true });
+  window.addEventListener("hashchange", () => show((parseInt(location.hash.slice(1), 10) || 1) - 1));
+
+  // ---------------- gráficos (números finais de results/pulse)
+  const MODELS = [
+    ["Persistência", .646, .266, .311, .1964], ["Climatologia", .830, .528, .705, .1065], ["Taxa recente (52 sem.)", .831, .541, .741, .1037],
+    ["Combinado (meta)", .836, .552, .742, .1033], ["Regressão logística", .839, .565, .757, .1017], ["RBM — energia livre", .792, .402, .501, .1166],
+    ["RBM + reg. logística", .836, .554, .748, .1027], ["MLP-seq", .839, .566, .761, .1018], ["MLP (janelas)", .841, .569, .760, .1014], ["LSTM", .841, .571, .761, .1012]];
+  const IDX = { roc: 1, pr: 2, top5: 3, brier: 4 };
+  const RANGE = { roc: [.6, .86], pr: [.2, .6], top5: [.25, .8], brier: [.09, .2] };
+  const fmt = (m, v) => m === "top5" ? `${(100 * v).toFixed(0)} %` : m === "brier" ? v.toFixed(4) : v.toFixed(3);
+  function drawBars(el, rows, metric, hiName, { base = ["Combinado (meta)"], dim = [] } = {}) {
+    const [lo, hi] = RANGE[metric];
+    el.innerHTML = rows.map(([name, ...vals]) => {
+      const v = vals[IDX[metric] - 1];
+      const w = metric === "brier" ? 100 * (hi - v) / (hi - lo) : 100 * (v - lo) / (hi - lo);
+      const cls = name === hiName ? "hi" : dim.includes(name) ? "dim" : "";
+      return `<div class="bar ${cls}"><span class="lbl" title="${name}">${name}</span><span class="track"><span class="fill" style="width:${Math.max(2, Math.min(100, w)).toFixed(1)}%"></span></span><span class="val">${fmt(metric, v)}</span></div>`;
+    }).join("");
+  }
+  const chartBase = document.getElementById("chart-base"), chartModels = document.getElementById("chart-models");
+  const baseRows = MODELS.slice(0, 4);
+  drawBars(chartBase, baseRows, "roc", "Combinado (meta)");
+  drawBars(chartModels, MODELS, "roc", "LSTM", { dim: ["RBM — energia livre"] });
+
+  const STRATA = [
+    ["Todo o teste", .528, .571, .830, .841], ["Sem M ≥ 4 na célula (4 sem.)", .216, .233, .775, .780], ["Com M ≥ 4 na célula (4 sem.)", .610, .657, .766, .790],
+    ["Com M ≥ 4 na última semana", .691, .743, .763, .798], ["Com M ≥ 5 na célula (4 sem.)", .682, .753, .748, .799], ["Com M ≥ 5 nos vizinhos (4 sem.)", .593, .637, .810, .826],
+    ["Células quietas (< 3 %/sem.)", .025, .068, .629, .679], ["Células ativas (> 20 %/sem.)", .640, .687, .685, .721]];
+  function drawStrata(metric) {
+    const el = document.getElementById("chart-strata");
+    const [ia, ib] = metric === "pr" ? [1, 2] : [3, 4];
+    const max = metric === "pr" ? .8 : .9, min = metric === "pr" ? 0 : .5;
+    el.innerHTML = STRATA.map((r) => {
+      const a = r[ia], b = r[ib], wa = 100 * (a - min) / (max - min), wb = 100 * (b - min) / (max - min);
+      return `<div class="bar"><span class="lbl" title="${r[0]}">${r[0]}</span><span class="track"><i class="a" style="width:${Math.max(1, wa).toFixed(1)}%"></i><i class="b" style="width:${Math.max(1, wb).toFixed(1)}%"></i></span><span class="val"><span>${a.toFixed(3)}</span><span>${b.toFixed(3)} (+${(b - a).toFixed(3)})</span></span></div>`;
+    }).join("");
+  }
+  drawStrata("pr");
+
+  const IMP = [["taxa histórica da célula", .1049], ["sequência: nº de eventos", .0592], ["sequência: eventos nos vizinhos", .0041], ["sequência: semanas desde o último evento", .0029],
+    ["média de eventos/semana (treino)", .0015], ["sequência: log-energia", .0012], ["sequência: magnitude média", .0007]];
+  document.getElementById("chart-imp").innerHTML = IMP.map(([k, v], i) =>
+    `<div class="bar ${i === 0 ? "hi" : ""}"><span class="lbl" title="${k}">${k}</span><span class="track"><span class="fill" style="width:${(100 * v / .11).toFixed(1)}%"></span></span><span class="val">+${v.toFixed(3)}</span></div>`).join("");
+
+  document.querySelectorAll(".switch").forEach((sw) => sw.querySelectorAll("button").forEach((b) => b.onclick = () => {
+    sw.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    const m = b.dataset.m, which = sw.dataset.chart;
+    if (which === "base") drawBars(chartBase, baseRows, m, "Combinado (meta)");
+    else if (which === "models") drawBars(chartModels, MODELS, m, "LSTM", { dim: ["RBM — energia livre"] });
+    else drawStrata(m);
+  }));
+
+  show(cur);
+})();
+</script>
+</body>
+</html>

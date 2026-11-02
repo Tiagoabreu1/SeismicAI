@@ -1,0 +1,23 @@
+# dados brutos e processados não são versionados (ver README para reproduzir); modelos e resultados, sim
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+.env
+
+# Firebase
+secrets/
+web/public/data/
+web/node_modules/
+web/.firebase/
+*.log
+docs/node_modules/
+results/*/feature_experiment_dataset.parquet
+# varredura: cada execução tem predições grandes; só o consolidado (sweep.md/csv) é versionado
+results/*/sweep/
+models/*/sweep/

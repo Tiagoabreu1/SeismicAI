@@ -1,0 +1,18 @@
+# Fase 1 - coleta, preparação dos dados e notebook
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+pyarrow>=14
+matplotlib>=3.8
+scikit-learn>=1.4
+jupyter             # para executar notebooks/01_fase1_observacoes.ipynb
+
+# Fase 2 - modelagem
+torch>=2.2          # com GPU NVIDIA: instale a versão CUDA conforme https://pytorch.org/get-started/locally/
+
+# Fase 3 - protótipo
+streamlit>=1.40
+plotly>=5.20
+
+# Fase 3 - publicação no Firebase
+firebase-admin>=6.5

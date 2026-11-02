@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // leitura pública das previsões; escrita só pelo pipeline (SDK Admin ignora as regras)
+    match /weeks/{week} { allow read: if true; allow write: if false; }
+    match /meta/{doc}   { allow read: if true; allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
