@@ -223,7 +223,6 @@ O mapa das sete entregas pedidas no enunciado está em `ENTREGAS.md`.
 
 | Arquivo | O que é |
 |---|---|
-| `docs/RESUMO_DO_PROJETO.md` | Contexto completo para o grupo: decisões, dados, modelos, números finais, roteiro de apresentação, perguntas e respostas |
 | `docs/analise_resultados.md` | Análise crítica dos resultados do teste (tabela principal, estratos, calibração, importâncias, RBM, Hopfield, limitações) |
 | `docs/artigo.md` / `artigo.docx` / `artigo.pdf` | Artigo de divulgação da startup (9 seções do enunciado, 5 páginas) |
 | `docs/apresentacao.html` | Apresentação final: arquivo único, abre em qualquer navegador, teclado/toque, notas (`N`), impressão, demo do site embutida |
