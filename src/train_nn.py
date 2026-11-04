@@ -6,7 +6,7 @@ Modelos
   mlp     : perceptron multicamadas sobre as features tabulares (janelas agregadas por célula x semana);
   lstm    : LSTM sobre a sequência das últimas 52 semanas (variáveis semanais do painel), concatenada
             com as features estáticas da célula (posição e climatologia) antes da camada de saída;
-  mlp_seq : MLP com exatamente as mesmas entradas da LSTM, achatadas (52 x variáveis + estáticas) —
+  mlp_seq : MLP com exatamente as mesmas entradas da LSTM, achatadas (52 x variáveis + estáticas),
             a "MLP com as mesmas entradas" que o notebook da Fase 1 pede como comparação.
 
 Procedimento
@@ -46,6 +46,7 @@ from seismic_data import SEQ_LEN, Scaler, load_panel, load_tabular, paths, save_
 class MLP(nn.Module):
     def __init__(self, d_in: int, hidden=(128, 64, 32), dropout: float = 0.2):
         super().__init__()
+        # Camadas densas com batch norm, ReLU e dropout; a última camada tem uma saída, o logit
         layers, d = [], d_in
         for h in hidden:
             layers += [nn.Linear(d, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
@@ -61,6 +62,7 @@ class LSTMNet(nn.Module):
     def __init__(self, d_seq: int, d_static: int, hidden: int = 64, layers: int = 1,
                  head: int = 64, dropout: float = 0.2):
         super().__init__()
+        # A LSTM lê a sequência; a cabeça junta o estado final com as variáveis fixas da célula
         self.lstm = nn.LSTM(d_seq, hidden, num_layers=layers, batch_first=True,
                             dropout=dropout if layers > 1 else 0.0)
         self.head = nn.Sequential(nn.Linear(hidden + d_static, head), nn.ReLU(),
@@ -87,6 +89,7 @@ class TabularData:
     """Features tabulares já padronizadas, como tensores no device."""
 
     def __init__(self, X, y, ids, device):
+        # Tudo vai para o device de uma vez: o dataset cabe na memória
         self.y = {s: torch.tensor(y[s], dtype=torch.float32, device=device) for s in y}
         self.X = {s: torch.tensor(X[s], device=device) for s in X}
         self.ids = ids
@@ -103,6 +106,7 @@ class SequenceData:
 
     def __init__(self, P, cells, static, ds_ids, y, device, seq_len=SEQ_LEN):
         self.seq_len = seq_len
+        # O painel inteiro fica no device; cada lote recorta as semanas anteriores de cada célula
         self.P = torch.tensor(P, device=device)                       # [C, W, F] padronizado
         self.S = torch.tensor(static, device=device)                  # [C, d_static] padronizado
         self.offsets = torch.arange(-seq_len + 1, 1, device=device)   # semanas t-51 .. t
@@ -139,6 +143,7 @@ def subsample_train(y: np.ndarray, max_rows: int | None, seed: int):
 
 # ----------------------------------------------------------------------------- treino
 @torch.no_grad()
+# Previsão em lotes, sem gradiente; o deslocamento do logit corrige a subamostragem de negativos
 def predict(model, data, s, idx=None, batch_size=8192, logit_shift=0.0) -> np.ndarray:
     model.eval()
     idx = torch.arange(data.n(s), device=data.y[s].device) if idx is None else idx
@@ -151,6 +156,7 @@ def predict(model, data, s, idx=None, batch_size=8192, logit_shift=0.0) -> np.nd
 
 def train(model, data, train_idx, val_idx, args, logit_shift, log):
     device = next(model.parameters()).device
+    # Perda, otimizador e redução da taxa de aprendizado quando a validação para de melhorar
     pos_weight = torch.tensor([args.pos_weight], device=device) if args.pos_weight else None
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -158,6 +164,7 @@ def train(model, data, train_idx, val_idx, args, logit_shift, log):
     y_val = data.y["val"][val_idx].cpu().numpy()
     best, best_state, bad, history = -1.0, None, 0, []
     g = torch.Generator(device="cpu").manual_seed(args.seed)
+    # Uma época: embaralha o treino, passa os lotes, mede na validação e guarda o melhor estado
     for epoch in range(1, args.epochs + 1):
         model.train()
         t0, total, nb = time.time(), 0.0, 0
@@ -180,6 +187,7 @@ def train(model, data, train_idx, val_idx, args, logit_shift, log):
                         "lr": opt.param_groups[0]["lr"], "seconds": time.time() - t0})
         log(f"época {epoch:>2}  perda {total / nb:.4f}  val ROC-AUC {roc:.4f}  PR-AUC {ap:.4f}  "
             f"lr {opt.param_groups[0]['lr']:.0e}  {time.time() - t0:5.0f}s")
+        # Early stopping pela PR-AUC de validação
         if ap > best + 1e-4:
             best, bad = ap, 0
             best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
@@ -210,6 +218,7 @@ def permutation_importance(model, data, names_by_input, logit_shift, n_rows=6000
             out.append(torch.sigmoid(model(*[t[i:i + 8192] for t in ins]) + logit_shift).cpu())
         return roc_auc_score(y, torch.cat(out).numpy())
 
+    # Mede a ROC-AUC com os dados intactos e depois com cada variável embaralhada entre as linhas
     base = score(inputs)
     rows = []
     perm = torch.tensor(rng.permutation(len(idx)), device=device)
@@ -224,6 +233,7 @@ def permutation_importance(model, data, names_by_input, logit_shift, n_rows=6000
 
 # ----------------------------------------------------------------------------- principal
 def main() -> None:
+    # Opções de linha de comando
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", choices=["mlp", "lstm", "mlp_seq"], required=True)
     ap.add_argument("--profile", default="pulse")
@@ -248,6 +258,7 @@ def main() -> None:
     ap.add_argument("--cpu", action="store_true")
     args = ap.parse_args()
 
+    # Sementes, device e pastas de saída
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     device = torch.device("cpu" if args.cpu or not torch.cuda.is_available() else "cuda")
@@ -264,6 +275,7 @@ def main() -> None:
     log(f"perfil {args.profile} | modelo {args.model} | device {device}" + (f" ({torch.cuda.get_device_name(0)})" if device.type == "cuda" else ""))
     t_start = time.time()
 
+    # Carrega o dataset tabular; sequência mais longa que 52 semanas exige linhas com histórico suficiente
     files = paths(args.profile)
     ds, feature_cols, static_cols = load_tabular(args.data or files["dataset"])
     if args.seq_len > SEQ_LEN:                 # sequência mais longa: só linhas com histórico suficiente
@@ -271,6 +283,7 @@ def main() -> None:
     X, y, ids = split_xy(ds, feature_cols)
     del ds
 
+    # MLP: padroniza as features tabulares (ajuste só no treino). LSTM e MLP-seq: padronizam o painel e as variáveis fixas
     if args.model == "mlp":
         scaler = Scaler(feature_cols).fit(X["train"])
         Xs = {s: scaler.transform(X[s]) for s in X}
@@ -300,6 +313,7 @@ def main() -> None:
         preprocess = {"sequence": seq_scaler.to_dict(), "static": stat_scaler.to_dict(), "seq_len": args.seq_len}
     del X
 
+    # Contagem de parâmetros, subamostragem opcional do treino e correção do logit
     n_params = sum(p.numel() for p in model.parameters())
     log(f"parâmetros treináveis: {n_params:,}")
 
@@ -314,8 +328,10 @@ def main() -> None:
     log(f"treino {len(train_np):,} linhas ({int(y['train'][train_np].sum()):,} positivos; negativos mantidos "
         f"{neg_rate:.0%}) | validação {len(val_np):,} | teste {data.n('test'):,}")
 
+    # Treino
     history = train(model, data, train_idx, val_idx, args, logit_shift, log)
 
+    # Previsões na validação e no teste, métricas, importância por permutação e gravação de tudo
     p_val = predict(model, data, "val", logit_shift=logit_shift)
     p_test = predict(model, data, "test", logit_shift=logit_shift)
     res = summarize(args.model, ids["val"], p_val, ids["test"], p_test)

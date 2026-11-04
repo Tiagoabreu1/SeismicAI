@@ -35,7 +35,7 @@ import sys
 import time
 from pathlib import Path
 
-# Console do Windows (cp1252) não imprime "≥" e afins: força UTF-8 na saída (sem efeito em Linux/macOS)
+# O console do Windows não imprime alguns símbolos; força UTF-8 na saída (sem efeito em Linux e macOS)
 for _stream in (sys.stdout, sys.stderr):
     try:
         _stream.reconfigure(encoding="utf-8", errors="replace")
@@ -45,11 +45,13 @@ for _stream in (sys.stdout, sys.stderr):
 import numpy as np
 import pandas as pd
 
+# Constantes de tempo: a semana tem 7 dias, as janelas vão de 1 a 52 semanas e cada amostra usa 52 semanas de histórico
 WEEK = pd.Timedelta(days=7)
 WINDOWS = (1, 4, 12, 52)   # janelas de agregação, em semanas
 SEQ_LEN = 52               # semanas de histórico por amostra (warm-up = SEQ_LEN - 1)
 
 # Círculo de Fogo: caixas (lat_min, lat_max, lon_min, lon_max), como no notebook da Fase 1
+# Caixas de latitude e longitude que delimitam o Círculo de Fogo; só células com centro dentro de uma caixa entram no estudo
 RING_BOXES = {
     "Andes (Chile–Colômbia)":          (-60, 15, -85, -65),
     "América Central e México":        (5, 33, -118, -77),
@@ -65,6 +67,7 @@ RING_BOXES = {
     "Tonga/Samoa (oeste da linha)":    (-30, -10, -180, -170),
 }
 
+# Perfis: todos os parâmetros do problema em um lugar só (magnitudes, tamanho da célula, período, divisão e corte de células)
 PROFILES = {
     "pulse": dict(
         description="P(>= 1 evento M >= 4,0 na célula 2°x2° do Círculo de Fogo na semana seguinte)",
@@ -90,8 +93,10 @@ def clean_events(df: pd.DataFrame, cfg: dict, end: str | None = "profile") -> tu
     """Limpeza do catálogo bruto (DataFrame já carregado). end="profile" usa o fim do perfil; None não corta o fim."""
     stats = {"eventos_brutos": int(len(df))}
     df = df.copy()
+    # Converte o tempo para data em UTC
     df["time"] = pd.to_datetime(df["time"], utc=True, errors="coerce")
 
+    # Mantém só terremotos reais, remove linhas incompletas e ids repetidos, guardando a contagem de cada etapa
     df = df[df["type"].eq("earthquake")]
     stats["apos_filtro_tipo_earthquake"] = int(len(df))
     df = df.dropna(subset=["time", "latitude", "longitude", "depth", "mag"])
@@ -99,6 +104,7 @@ def clean_events(df: pd.DataFrame, cfg: dict, end: str | None = "profile") -> tu
     df = df.drop_duplicates(subset="id", keep="last")
     stats["apos_remover_duplicados"] = int(len(df))
 
+    # Filtra pela magnitude mínima e pelo período do perfil; o fim é exclusivo
     start = pd.Timestamp(cfg["start"], tz="UTC")
     keep = (df["mag"] >= cfg["min_mag"]) & (df["time"] >= start)
     end = cfg["end"] if end == "profile" else end
@@ -107,6 +113,7 @@ def clean_events(df: pd.DataFrame, cfg: dict, end: str | None = "profile") -> tu
     df = df[keep].copy()
     stats["apos_filtro_magnitude_periodo"] = int(len(df))
 
+    # Profundidade negativa vira zero e a longitude fica entre -180 e 180
     df["depth"] = df["depth"].clip(lower=0.0)
     df["longitude"] = ((df["longitude"] + 180.0) % 360.0) - 180.0
     return df.sort_values("time").reset_index(drop=True), stats
@@ -123,10 +130,12 @@ def week_origin(cfg: dict) -> pd.Timestamp:
 
 
 # --------------------------------------------------------------------------- grade e região
+# Número de linhas e colunas da grade global para um tamanho de célula
 def grid_shape(cell: float) -> tuple[int, int]:
     return int(round(180 / cell)), int(round(360 / cell))
 
 
+# Dá a cada evento o índice da célula (linha e coluna da grade) e o índice da semana desde a origem
 def assign_grid(df: pd.DataFrame, cell: float, origin: pd.Timestamp) -> pd.DataFrame:
     nrows, ncols = grid_shape(cell)
     row = np.clip(np.floor((df["latitude"].to_numpy() + 90.0) / cell).astype(int), 0, nrows - 1)
@@ -137,6 +146,7 @@ def assign_grid(df: pd.DataFrame, cell: float, origin: pd.Timestamp) -> pd.DataF
     return df
 
 
+# Centro (latitude, longitude) de cada célula a partir do índice
 def cell_centers(cells: np.ndarray, cell: float) -> tuple[np.ndarray, np.ndarray]:
     _, ncols = grid_shape(cell)
     return -90.0 + (cells // ncols + 0.5) * cell, -180.0 + (cells % ncols + 0.5) * cell
@@ -154,12 +164,14 @@ def segment_of(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
 # --------------------------------------------------------------------------- utilitários
 def rolling_sum(A: np.ndarray, w: int) -> np.ndarray:
     """Soma das últimas w colunas (inclusive a atual), por linha."""
+    # Soma acumulada: a soma de uma janela é a diferença entre dois pontos da acumulada
     cs = np.cumsum(A, axis=1)
     out = cs.copy()
     out[:, w:] = cs[:, w:] - cs[:, :-w]
     return out
 
 
+# Máximo móvel por linha, usando o rolling do pandas sobre as colunas
 def rolling_max(A: np.ndarray, w: int) -> np.ndarray:
     return pd.DataFrame(A.T).rolling(w, min_periods=1).max().to_numpy().T
 
@@ -167,6 +179,7 @@ def rolling_max(A: np.ndarray, w: int) -> np.ndarray:
 def weeks_since(flag: np.ndarray, cap: int) -> np.ndarray:
     """Semanas desde a última coluna com flag > 0 (0 = nesta semana); teto = cap."""
     n_weeks = flag.shape[1]
+    # Para cada semana, posição da última semana com evento até ali; a diferença é a espera
     idx = np.where(flag > 0, np.arange(n_weeks)[None, :], -10**9)
     last = np.maximum.accumulate(idx, axis=1)
     return np.minimum(np.arange(n_weeks)[None, :] - last, cap)
@@ -174,6 +187,7 @@ def weeks_since(flag: np.ndarray, cap: int) -> np.ndarray:
 
 def neighbors_sum(G: np.ndarray, nrows: int, ncols: int) -> np.ndarray:
     """Soma das 8 células vizinhas em uma grade [nrows*ncols, semanas]; a longitude dá a volta em ±180°."""
+    # Desloca a grade em cada uma das 8 direções e soma; na longitude o deslocamento dá a volta, na latitude não
     G = G.reshape(nrows, ncols, -1)
     S = np.zeros_like(G)
     for di in (-1, 0, 1):
@@ -199,6 +213,7 @@ def weekly_arrays(df: pd.DataFrame, cfg: dict, active: np.ndarray, n_weeks: int)
     df["is_big"] = (df["mag"] >= big_mag).astype(int)
 
     # grade global semanal (todas as células), para as features de vizinhança
+    # Contagens por célula e semana em toda a grade, para somar os vizinhos (inclui células fora da região)
     g_all = df.groupby(["cell", "week"]).agg(n=("mag", "size"), nbig=("is_big", "sum"))
     N_all = np.zeros((nrows * ncols, n_weeks), np.float32)
     NBIG_all = np.zeros_like(N_all)
@@ -211,6 +226,7 @@ def weekly_arrays(df: pd.DataFrame, cfg: dict, active: np.ndarray, n_weeks: int)
     del N_all, NBIG_all
 
     # agregados semanais das células ativas
+    # Agregados semanais das células ativas: contagem, magnitudes, energia, profundidade e eventos grandes
     df = df[df["cell"].isin(active)].copy()
     df["energy"] = 10.0 ** (1.5 * (df["mag"] - min_mag))          # energia relativa ao evento M = min_mag
     df["is_target"] = (df["mag"] >= label_mag).astype(int)
@@ -221,6 +237,7 @@ def weekly_arrays(df: pd.DataFrame, cfg: dict, active: np.ndarray, n_weeks: int)
         ntarget=("is_target", "sum"), nbig=("is_big", "sum"), n6=("is_m6", "sum"),
     )
 
+    # Transforma a tabela longa em matriz célula x semana; semanas sem eventos ficam com zero
     def grid(col: str) -> np.ndarray:
         return (wk[col].unstack("week")
                 .reindex(index=active, columns=np.arange(n_weeks))
@@ -238,6 +255,7 @@ def window_features(A: dict[str, np.ndarray], cfg: dict) -> dict[str, np.ndarray
     distinct_target = cfg["label_mag"] > cfg["min_mag"]       # senão ntarget == n
     distinct_m6 = cfg["big_mag"] != 6.0                        # senão n6 == nbig
     feats: dict[str, np.ndarray] = {}
+    # Para cada janela, soma, máximo e médias das últimas w semanas, incluindo a semana atual
     for w in WINDOWS:
         n_w = rolling_sum(A["N"], w)
         feats[f"n_{w}w"] = n_w
@@ -253,6 +271,7 @@ def window_features(A: dict[str, np.ndarray], cfg: dict) -> dict[str, np.ndarray
             feats[f"n6_{w}w"] = rolling_sum(A["N6"], w)
         feats[f"nviz_{w}w"] = rolling_sum(A["NVIZ"], w)
         feats[f"nvizbig_{w}w"] = rolling_sum(A["NVIZBIG"], w)
+    # Semanas desde o último evento (qualquer, alvo e grande), com teto, e semanas ativas nas últimas 52
     cap = cfg["since_cap"]
     feats["wsl_any"] = weeks_since(A["N"], cap)
     if distinct_target:
@@ -266,6 +285,7 @@ def panel_columns(A: dict[str, np.ndarray], feats: dict[str, np.ndarray], cfg: d
     """Variáveis semanais [célula, semana] da sequência da LSTM."""
     distinct_target = cfg["label_mag"] > cfg["min_mag"]
     distinct_m6 = cfg["big_mag"] != 6.0
+    # Uma variável por semana, sem janelas: é o que a LSTM lê como sequência
     N = A["N"]
     with np.errstate(divide="ignore", invalid="ignore"):
         cols = {"n": N, "max_mag": A["MAXM"], "mean_mag": np.where(N > 0, A["SUMM"] / N, 0.0),
@@ -286,9 +306,11 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     cell = cfg["cell"]
     _, ncols = grid_shape(cell)
     origin = week_origin(cfg)
+    # Atribui célula e semana a cada evento e salva o catálogo limpo
     df = assign_grid(df, cell, origin)
     df.to_parquet(outdir / f"events_clean_{tag}.parquet", index=False)
 
+    # Só semanas completas entram; a última semana, parcial, é descartada
     data_end = pd.Timestamp(cfg["end"], tz="UTC") if cfg["end"] else df["time"].max()
     n_weeks = int((data_end - origin) // WEEK)                      # semanas 0..n_weeks-1 completas
     week_start = origin + pd.to_timedelta(np.arange(n_weeks) * 7, unit="D")
@@ -307,6 +329,7 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     n_c = len(active)
     n_cells_with_events = int(df["cell"].nunique())
 
+    # Agregados semanais e features de janela
     A = weekly_arrays(df, cfg, active, n_weeks)
     N, NT = A["N"], A["NT"]
     feats = window_features(A, cfg)
@@ -318,6 +341,7 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     mean_n = N[:, train_weeks].mean(axis=1)
 
     # rótulo e tabela longa
+    # Rótulo: houve evento alvo na semana seguinte? A divisão treino, validação e teste usa o ano da semana do rótulo
     warmup = SEQ_LEN - 1
     t = np.arange(warmup, n_weeks - 1)                 # semanas com 52 semanas de histórico e rótulo disponível
     n_t = len(t)
@@ -326,6 +350,7 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     split = np.where(label_year <= cfg["train_last_year"], "train",
                      np.where(label_year <= cfg["val_last_year"], "val", "test"))
 
+    # Monta a tabela final, uma linha por célula e semana: atributos fixos da célula primeiro, depois as features
     out: dict[str, np.ndarray] = {
         "cell": np.repeat(active, n_t),
         "week": np.tile(t, n_c),
@@ -357,6 +382,7 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     panel["is_train"] = np.tile(train_weeks, n_c)
     panel.to_parquet(outdir / f"panel_{tag}.parquet", index=False)
 
+    # Tabela das células ativas, com posição, segmento e taxas históricas
     cells = pd.DataFrame({
         "cell": active, "row": active // ncols, "col": active % ncols, "lat_c": lat_c, "lon_c": lon_c,
         "segment": segment_of(lat_c, lon_c),
@@ -365,6 +391,7 @@ def build(df: pd.DataFrame, cfg: dict, outdir: Path, stats: dict, tag: str) -> d
     })
     cells.to_csv(outdir / f"cells_{tag}.csv", index=False)
 
+    # Resumo com parâmetros e contagens, usado pelo relatório e pelos outros scripts
     feature_cols = [c for c in ds.columns if c not in ("cell", "week", "y", "split", "week_start", "label_week_start")]
     summary = {
         "profile": tag, **cfg,
@@ -395,6 +422,7 @@ def main() -> None:
     ap.add_argument("--outdir", default="data/processed")
     args = ap.parse_args()
 
+    # Lê o perfil e aplica as opções de linha de comando
     cfg = dict(PROFILES[args.profile])
     if args.cell:
         cfg["cell"] = args.cell
@@ -404,6 +432,7 @@ def main() -> None:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
+    # Limpa o catálogo, constrói o dataset e imprime o resumo
     df, stats = load_and_clean(args.input or cfg["input"], cfg)
     s = build(df, cfg, outdir, stats, tag)
 
