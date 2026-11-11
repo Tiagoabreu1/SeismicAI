@@ -142,14 +142,21 @@ def run_one(profile: str, sub: str, group: str, name: str, args: list[str], quic
     env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=ROOT, env=env)
     minutes = (time.time() - t0) / 60
-    m = load_valid(f, quick) if r.returncode == 0 else None
+    # O critério de sucesso é o resultado gravado nesta execução, não o código de saída: no Windows, treinos com
+    # GPU podem terminar com código diferente de zero ao encerrar o processo, depois de tudo já estar salvo.
+    fresh = f.exists() and f.stat().st_mtime >= t0 - 2
+    m = load_valid(f, quick) if fresh else None
     if m is None:
-        print(f"    FALHOU após {minutes:.1f} min. Fim da saída do treino:", flush=True)
+        print(f"    FALHOU após {minutes:.1f} min (código de saída {r.returncode}). Fim da saída do treino:", flush=True)
         print("    " + "\n    ".join((r.stdout[-800:] + "\n" + r.stderr[-1500:]).strip().splitlines()[-18:]), flush=True)
         return "falhou"
     t = m["test"]
     print(f"    {minutes:.1f} min, {m.get('device', '?')}, {m.get('epochs_run', '?')} épocas | "
           f"validação PR-AUC {m['val']['pr_auc']:.4f} | teste ROC-AUC {t['roc_auc']:.4f} PR-AUC {t['pr_auc']:.4f}", flush=True)
+    if r.returncode != 0:
+        saved = (mdir / f"{model_of(args)}.pt").exists()
+        print(f"    aviso: o processo terminou com código {r.returncode} depois de gravar os resultados"
+              + ("; métricas e modelo estão salvos e valem." if saved else "; as métricas valem, mas o arquivo do modelo não foi salvo."), flush=True)
     return "feito"
 
 
@@ -170,12 +177,24 @@ def collect(profile: str, sub: str, quick: bool) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def noise_factor(n: int) -> float:
+    """Meia-largura, em desvios amostrais, do intervalo de 95 % para UMA nova execução da mesma configuração,
+    quando o desvio foi estimado com n sementes: t(0,975; n-1) * raiz(1 + 1/n). Com 5 sementes, cerca de 3."""
+    if n < 2:
+        return float("nan")
+    try:
+        from scipy import stats
+        return float(stats.t.ppf(0.975, n - 1) * (1 + 1 / n) ** 0.5)
+    except ImportError:
+        return {2: 15.56, 3: 4.97, 4: 3.56, 5: 3.04, 6: 2.78}.get(n, 2.5)
+
+
 def report(df: pd.DataFrame, profile: str, quick: bool) -> str:
     """Monta a tabela consolidada em Markdown."""
     md = [f"# Varredura de hiperparâmetros e sementes (perfil {profile}, conjunto de teste)\n"]
     if quick:
         md.append("**Teste rápido: treino subamostrado e 1 época. Os números abaixo não valem; servem só para conferir a mecânica.**\n")
-    ref: dict[str, tuple[float, float]] = {}
+    ref: dict[str, dict] = {}
     seeds = df[df["grupo"] == "seeds"]
     if len(seeds):
         md += ["## Variabilidade entre sementes (mesma configuração, sementes diferentes)\n",
@@ -183,38 +202,63 @@ def report(df: pd.DataFrame, profile: str, quick: bool) -> str:
         for model, d in seeds.groupby("modelo"):
             def cell(c: str, nd: int = 4) -> str:
                 return f"{d[c].mean():.{nd}f} ± {d[c].std():.{nd}f}" if len(d) > 1 else f"{d[c].mean():.{nd}f}"
-            ref[model] = (float(d["val_pr_auc"].mean()), float(d["val_pr_auc"].std()) if len(d) > 1 else float("nan"))
+            k = noise_factor(len(d))
+            ref[model] = {"n": len(d), "k": k,
+                          "val": (float(d["val_pr_auc"].mean()), float(d["val_pr_auc"].std()) if len(d) > 1 else float("nan")),
+                          "brier": (float(d["brier"].mean()), float(d["brier"].std()) if len(d) > 1 else float("nan"))}
             md.append(f"| {model} | {len(d)} | {cell('val_pr_auc')} | {cell('roc_auc')} | {cell('pr_auc')} | {cell('brier')} | {cell('precision_top5', 3)} |")
         if {"lstm", "mlp"} <= set(ref):
             a, b = seeds[seeds["modelo"] == "lstm"]["pr_auc"], seeds[seeds["modelo"] == "mlp"]["pr_auc"]
             if len(a) > 1 and len(b) > 1:
-                md.append(f"\nDiferença entre LSTM e MLP na PR-AUC de teste: {a.mean() - b.mean():+.4f} "
-                          f"(desvios entre sementes: {a.std():.4f} e {b.std():.4f}). "
-                          "Se a diferença for menor que cerca de dois desvios, os modelos empatam dentro do ruído.")
+                separated = a.min() > b.max() or b.min() > a.max()
+                try:
+                    from scipy import stats
+                    tstat, pval = stats.ttest_ind(a, b, equal_var=False)
+                    test = f" (teste t de Welch: t = {tstat:.1f}, p = {pval:.4f})"
+                    significant = pval < 0.05
+                except ImportError:
+                    test, significant = "", separated
+                better = "LSTM" if a.mean() > b.mean() else "MLP"
+                md.append(f"\nLSTM contra MLP na PR-AUC de teste: diferença de {a.mean() - b.mean():+.4f}{test}. "
+                          f"LSTM de {a.min():.4f} a {a.max():.4f}; MLP de {b.min():.4f} a {b.max():.4f}. "
+                          + (f"A {better} é melhor de forma consistente entre sementes" + (", e as faixas nem se sobrepõem" if separated else "")
+                             + ": a diferença é pequena, mas não é ruído de treino." if significant
+                             else "A diferença não se distingue do ruído entre sementes."))
+    outside, brier_out = [], []
     for group, title in (("sweep", "Varredura de arquitetura e treino"), ("targeted", "Experimentos dirigidos")):
         d = df[df["grupo"] == group]
         if not len(d):
             continue
         md += [f"\n## {title}\n",
-               "Cada linha é uma execução com uma semente. A coluna de comparação usa a PR-AUC de validação da configuração "
-               "base do mesmo tipo de modelo (média das sementes); a MLP-seq é comparada com a base da LSTM.\n",
+               "Cada linha é uma execução com uma semente, comparada com a configuração base do mesmo tipo de modelo "
+               "(média das sementes) pela PR-AUC de validação; a MLP-seq é comparada com a base da LSTM.\n",
                "| Execução | Argumentos alterados | Parâmetros | PR-AUC validação | Diferença para a base | ROC-AUC | PR-AUC | Brier | Top 5 % | Épocas (melhor) | Minutos |",
                "|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in d.sort_values("val_pr_auc", ascending=False).itertuples():
-            base_mean, base_std = ref.get("lstm" if r.modelo == "mlp_seq" else r.modelo, (float("nan"), float("nan")))
-            if base_mean == base_mean:
-                diff = r.val_pr_auc - base_mean
-                verdict = "" if base_std != base_std else (" (acima do ruído)" if diff > 2 * base_std else
-                                                          " (abaixo do ruído)" if diff < -2 * base_std else " (dentro do ruído)")
-                comp = f"{diff:+.4f}{verdict}"
-            else:
-                comp = "sem base"
-            md.append(f"| {r.nome} | `{r.alterado}` | {r.params:,} | {r.val_pr_auc:.4f} | {comp} | {r.roc_auc:.4f} | {r.pr_auc:.4f} | "
-                      f"{r.brier:.4f} | {r.precision_top5:.3f} | {r.epocas} ({r.melhor_epoca}) | {r.segundos / 60:.1f} |")
+            base = ref.get("lstm" if r.modelo == "mlp_seq" else r.modelo)
+            comp = "sem base"
+            if base and base["val"][1] == base["val"][1]:
+                diff, band = r.val_pr_auc - base["val"][0], base["k"] * base["val"][1]
+                verdict = "acima do ruído" if diff > band else "abaixo do ruído" if diff < -band else "dentro do ruído"
+                comp = f"{diff:+.4f} ({verdict})"
+                if verdict != "dentro do ruído":
+                    outside.append(f"{r.nome} ({'melhor' if diff > 0 else 'pior'}, {diff:+.4f})")
+                bdiff = r.brier - base["brier"][0]
+                if abs(bdiff) > base["k"] * base["brier"][1]:
+                    brier_out.append(f"{r.nome} ({bdiff:+.4f})")
+            md.append(f"| {r.nome} | `{r.alterado}` | {int(r.params):,} | {r.val_pr_auc:.4f} | {comp} | {r.roc_auc:.4f} | {r.pr_auc:.4f} | "
+                      f"{r.brier:.4f} | {r.precision_top5:.3f} | {int(r.epocas)} ({int(r.melhor_epoca)}) | {r.segundos / 60:.1f} |")
+    if ref and (df["grupo"] != "seeds").any():
+        md += ["\n## Resumo\n",
+               "Fora do ruído na PR-AUC de validação: " + (", ".join(outside) if outside else "nenhuma execução") + ".",
+               "Brier fora do ruído (positivo significa calibração pior): " + (", ".join(brier_out) if brier_out else "nenhuma execução") + "."]
+    k_txt = ", ".join(f"{m} {v['k']:.2f} desvios (n = {v['n']})" for m, v in ref.items() if v["k"] == v["k"])
     md += ["\nComo ler: a escolha de configuração se faz pela PR-AUC de validação, nunca pela de teste; as colunas de teste "
-           "estão aqui para mostrar que a ordem se mantém. \"Dentro do ruído\" significa diferença menor que dois desvios "
-           "entre sementes da configuração base. A perda ponderada (pos_weight) costuma manter a PR-AUC e piorar o Brier, "
-           "porque as probabilidades saem infladas."]
+           "estão aqui para mostrar que a ordem se mantém. \"Dentro do ruído\" significa que a execução cai no intervalo de 95 % "
+           "esperado para uma nova semente da configuração base" + (f" ({k_txt})" if k_txt else "") + ". "
+           "Em \"Épocas (melhor)\", o segundo número é a época de maior PR-AUC de validação. "
+           "A perda ponderada (pos_weight) vem acompanhada, no train_nn.py, de uma correção do logit que devolve a calibração; "
+           "por isso o esperado é que ela não mude nem a PR-AUC nem o Brier. Sem essa correção, as probabilidades sairiam infladas."]
     return "\n".join(md) + "\n"
 
 
