@@ -184,7 +184,9 @@ variáveis base, reproduz o resultado das redes (0,841 / 0,569).
 | base + extras | gradient boosting | 67 | 0,8420 | 0,5707 | 0,752 | 0,073 |
 | só extras | gradient boosting | 22 | 0,8389 | 0,5637 | 0,744 | 0,071 |
 
-Vinte e duas variáveis a mais movem a ROC-AUC em +0,0008 e a PR-AUC em +0,0013, dentro do ruído.
+Vinte e duas variáveis a mais movem a ROC-AUC em +0,0008 e a PR-AUC em +0,0013. É um ganho mínimo; o
+ruído desse experimento não foi medido, então não cabe chamá-lo de ruído, só de pequeno demais para
+mudar o resultado.
 As 22 sozinhas recuperam 99 % do desempenho das 45: descrevem a mesma informação de outro jeito. Na
 importância por permutação, a taxa histórica continua dominando (+0,063), seguida do nº de semanas
 ativas nas últimas 52 (+0,008); a melhor variável nova, `n_104w`, vale +0,003. O único sinal
