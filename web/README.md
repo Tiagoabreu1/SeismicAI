@@ -1,4 +1,4 @@
-# SeismicAI Pulse — site (Firebase Hosting + Cloud Firestore)
+# SeismicAI Pulse, site (Firebase Hosting + Cloud Firestore)
 
 Site estático (HTML/JS + Leaflet, modo escuro, mapa-múndi vetorial próprio sem tiles externos nem chave de API) que lê as previsões publicadas pelo pipeline (`src/publish_firebase.py`) no Firestore.
 
@@ -12,9 +12,9 @@ cd web/public && python -m http.server 8000                     # http://localho
 ## Publicar no Firebase (uma vez)
 
 1. Crie um projeto em https://console.firebase.google.com e, nele, ative o **Cloud Firestore** (modo de produção).
-2. **Conta de serviço** (para o pipeline escrever): Configurações do projeto → Contas de serviço → *Gerar nova
-   chave privada* → salve como `secrets/serviceAccount.json` (a pasta está no .gitignore).
-3. **App Web** (para o site ler): Configurações do projeto → Seus apps → *Adicionar app* → Web → copie o objeto
+2. **Conta de serviço** (para o pipeline escrever): Configurações do projeto, Contas de serviço, *Gerar nova
+   chave privada*, salve como `secrets/serviceAccount.json` (a pasta está no .gitignore).
+3. **App Web** (para o site ler): Configurações do projeto, Seus apps, *Adicionar app*, Web, copie o objeto
    `firebaseConfig` para `web/public/firebase-config.js`.
 4. Instale as ferramentas: `npm install -g firebase-tools`, depois `firebase login`.
 5. Em `web/`, edite `.firebaserc` com o id do projeto e rode `firebase deploy --only firestore:rules,hosting`.
