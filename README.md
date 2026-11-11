@@ -1,4 +1,4 @@
-# SeismicAI Pulse — probabilidade semanal de atividade sísmica por região
+# SeismicAI Pulse, probabilidade semanal de atividade sísmica por região
 
 Projeto da disciplina de Redes Neurais e Deep Learning (2026). Alice De Muylder, Valmir Cerutti e
 Tiago Abreu.
@@ -107,20 +107,20 @@ seismicai/
 └── docs/                    # artigo e apresentação (Fase 3)
 ```
 
-## 5. Fase 2 — Redes neurais
+## 5. Fase 2, Redes neurais
 
 | Modelo | Entrada | Arquitetura | Parâmetros |
 |---|---|---|---|
-| Persistência (ref.) | última semana | p = 1 se houve evento na célula na semana *t* | — |
-| Climatologia (ref.) | taxa histórica | p = fração de semanas de treino com evento na célula | — |
-| Taxa recente (ref.) | últimas 52 semanas | p = fração das últimas 52 semanas com evento | — |
-| Combinado (ref.) | — | média da climatologia com a taxa recente (melhor baseline da Fase 1) | — |
+| Persistência (ref.) | última semana | p = 1 se houve evento na célula na semana *t* |, |
+| Climatologia (ref.) | taxa histórica | p = fração de semanas de treino com evento na célula |, |
+| Taxa recente (ref.) | últimas 52 semanas | p = fração das últimas 52 semanas com evento |, |
+| Combinado (ref.) |, | média da climatologia com a taxa recente (melhor baseline da Fase 1) |, |
 | Regressão logística (ref.) | 45 features | modelo linear + sigmoide | 46 |
-| **MLP** | 45 features | Dense 128 → BatchNorm → ReLU → Dropout 0,2 → Dense 64 → BN → ReLU → Dropout → Dense 32 → BN → ReLU → Dropout → Dense 1 → sigmoide | ~17 mil |
-| **MLP-seq** | 52 × 10 + 5, achatadas | Dense 256 → BN → ReLU → Dropout → Dense 64 → BN → ReLU → Dropout → Dense 1 → sigmoide | ~150 mil |
-| **LSTM** | sequência 52 × 10 + 5 estáticas | LSTM(64) → concatena estáticas → Dense 64 → ReLU → Dropout 0,2 → Dense 1 → sigmoide | ~24 mil |
-| **RBM + reg. logística** | 45 features em [0, 1] | RBM Bernoulli 45 visíveis × 64 ocultas, treinada sem rótulos por divergência contrastiva (CD-1, 10 épocas); h = sigmoid(Wx + c) → regressão logística | ~3 mil + 65 |
-| **RBM (energia livre)** | idem | F(x) = −b·x − Σ softplus(Wx + c), calibrada por Platt na validação: score 100 % não supervisionado | — |
+| **MLP** | 45 features | Dense 128, BatchNorm, ReLU, Dropout 0,2; Dense 64, BN, ReLU, Dropout; Dense 32, BN, ReLU, Dropout; Dense 1, sigmoide | ~17 mil |
+| **MLP-seq** | 52 × 10 + 5, achatadas | Dense 256, BN, ReLU, Dropout; Dense 64, BN, ReLU, Dropout; Dense 1, sigmoide | ~150 mil |
+| **LSTM** | sequência 52 × 10 + 5 estáticas | LSTM(64), concatenação das estáticas, Dense 64, ReLU, Dropout 0,2, Dense 1, sigmoide | ~24 mil |
+| **RBM + reg. logística** | 45 features em [0, 1] | RBM Bernoulli 45 visíveis × 64 ocultas, treinada sem rótulos por divergência contrastiva (CD-1, 10 épocas); h = sigmoid(Wx + c) alimenta uma regressão logística | ~3 mil + 65 |
+| **RBM (energia livre)** | idem | F(x) = −b x − Σ softplus(Wx + c), calibrada por Platt na validação: score 100 % não supervisionado |, |
 | **Hopfield (saída)** | 26 bits: limiares sobre p do modelo, atividade recente, vizinhos e magnitude | memória associativa com 3 protótipos (NORMAL, ATENÇÃO, ALARME), regra de projeção, dinâmica assíncrona até o atrator | 26 × 26 |
 
 **Rede de Hopfield como saída do projeto.** O modelo probabilístico (LSTM) entrega `p`; a rede de
@@ -132,7 +132,7 @@ O alarme só é emitido quando a rede converge exatamente para o protótipo de A
 compara o alarme com uma regra simples sobre `p` no mesmo ponto de operação (mesma fração de
 alarmes): a Hopfield não supera um limiar bem escolhido (uma memória binária não tem como), mas
 entrega estados discretos, legíveis (os protótipos são listas de bits ativos) e robustos a bits
-faltantes — e é o que o protótipo do produto mostra no mapa. Saídas: `results/{perfil}/hopfield_table.md`,
+faltantes, e é o que o protótipo do produto mostra no mapa. Saídas: `results/{perfil}/hopfield_table.md`,
 `fig_hopfield_*.png`, `preds_hopfield.parquet` e a memória em `models/{perfil}/hopfield.json`.
 
 **Treinamento.** Padronização (log1p nas contagens + z-score) ajustada só no treino; perda binary
@@ -147,10 +147,10 @@ recall / F1 no limiar da validação, precision / recall ao sinalizar os 5 % de 
 probabilidade, ROC-AUC por ano do teste, importância por permutação, análise por estratos (semanas após
 eventos grandes, vizinhos ativos, células quietas vs. ativas) e tabela de calibração.
 
-**Meta (definida na Fase 1):** superar o baseline Combinado no teste — ROC-AUC > 0,836 e PR-AUC > 0,552 —
+**Meta (definida na Fase 1):** superar o baseline Combinado no teste, ROC-AUC > 0,836 e PR-AUC > 0,552 , 
 com boa calibração.
 
-## 6. Apêndice — formulação global M ≥ 5,0 (perfil `global`)
+## 6. Apêndice, formulação global M ≥ 5,0 (perfil `global`)
 
 Antes de alinhar o pipeline à Fase 1 do grupo, o mesmo código foi aplicado a uma formulação mais
 difícil: M ≥ 5,0 em células de 3° no mundo todo, 1990–2026, 770 células, ~3 % de positivos
@@ -162,13 +162,13 @@ GPU). Achados que valem para o artigo:
   resolução diária não movem o número): a MLP (0,818 / PR-AUC 0,187) já está nele, contra 0,803 / 0,140
   da climatologia;
 - o ganho da rede está onde a AUC agregada não mostra: após um M ≥ 6 na célula, a PR-AUC dobra
-  (0,236 → 0,472) e as probabilidades ficam calibradas até ~0,75, enquanto a climatologia satura em 0,32;
+  (0,236 -> 0,472) e as probabilidades ficam calibradas até ~0,75, enquanto a climatologia satura em 0,32;
 - a energia livre da RBM, treinada sem nenhum rótulo, atinge ROC-AUC 0,78: a RBM aprende sozinha que
   semana "atípica" é semana de risco; com a regressão logística sobre as ocultas, 0,807;
 - na Hopfield, 73 % dos alarmes M ≥ 6 não têm assinatura (nenhum M ≥ 6 recente na célula ou nos
-  vizinhos) — nenhum reconhecedor de padrões os antecipa; nos que têm, o alarme da rede recupera 38 %.
+  vizinhos), nenhum reconhecedor de padrões os antecipa; nos que têm, o alarme da rede recupera 38 %.
 
-## 7. Fase 3 — Protótipo (app/app.py)
+## 7. Fase 3, Protótipo (app/app.py)
 
 ```bash
 streamlit run app/app.py          # da raiz do projeto, com data/, models/ e results/ gerados
@@ -195,13 +195,13 @@ reproduz exatamente as probabilidades gravadas no treino (verificado: diferença
 ## 8. Produto no Firebase (Cloud Firestore + Hosting)
 
 O pipeline publica as previsões no **Cloud Firestore** e um site estático no **Firebase Hosting** as
-exibe — a arquitetura de produto: o motor (Python) roda onde for conveniente e o cliente lê só o resultado.
+exibe, a arquitetura de produto: o motor (Python) roda onde for conveniente e o cliente lê só o resultado.
 
 ```
-USGS (feed) → src/predict.py (LSTM + Hopfield) → src/publish_firebase.py → Firestore
+USGS (feed) -> src/predict.py (LSTM + Hopfield) -> src/publish_firebase.py -> Firestore
                                                        weeks/{semana}: 709 células (p, estado, atividade) + eventos
                                                        meta/latest: semana corrente, lista de semanas, métricas
-                                                                        └→ web/public (Firebase Hosting)
+                                                                        └-> web/public (Firebase Hosting)
 ```
 
 ```bash
@@ -225,7 +225,7 @@ O mapa das sete entregas pedidas no enunciado está em `ENTREGAS.md`.
 |---|---|
 | `docs/analise_resultados.md` | Análise crítica dos resultados do teste (tabela principal, estratos, calibração, importâncias, RBM, Hopfield, limitações) |
 | `docs/artigo.md` / `artigo.docx` / `artigo.pdf` | Artigo de divulgação da startup (9 seções do enunciado, 5 páginas) |
-| `docs/apresentacao.html` | Apresentação final: arquivo único, abre em qualquer navegador, teclado/toque, notas (`N`), impressão, demo do site embutida |
+| `docs/apresentacao.html` | Apresentação final (21 slides): arquivo único, abre em qualquer navegador, teclado e toque, demo interativa |
 | `docs/fig/` | Figuras usadas no artigo e na apresentação (cópias de `results/pulse/`) |
 
 Regerar: `node docs/build_artigo_docx.js` (precisa de `docx` e `image-size` via npm) e
@@ -233,6 +233,11 @@ Regerar: `node docs/build_artigo_docx.js` (precisa de `docx` e `image-size` via 
 
 ## 11. Resultados finais (perfil pulse, teste 2021–2025)
 
-LSTM: ROC-AUC 0,841 · PR-AUC 0,571 · Brier 0,1012 · precisão no top 5 % 76 % — acima da meta da
+LSTM: ROC-AUC 0,841, PR-AUC 0,571, Brier 0,1012, precisão no top 5 % de 76 %, acima da meta da
 Fase 1 (Combinado: 0,836 / 0,552). MLP 0,841 / 0,569; regressão logística 0,839 / 0,565; RBM (energia
 livre, sem rótulos) 0,792 / 0,402. Tabelas e figuras completas em `results/pulse/`.
+
+Com cinco sementes: LSTM 0,8413 ± 0,0001 / 0,5701 ± 0,0003; MLP 0,8411 ± 0,0001 / 0,5689 ± 0,0003. Uma
+varredura de 29 treinos (neurônios, camadas, dropout, taxa de aprendizado, lote, épocas, tamanho da
+sequência e perda ponderada) não encontrou configuração melhor que a oficial além do ruído entre
+sementes; ver `results/pulse/sweep.md` e a seção 9 de `docs/analise_resultados.md`.
